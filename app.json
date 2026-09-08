@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.praveen_ftx_dev.homehub"
     },
     "web": {
       "output": "static",
@@ -32,7 +33,10 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-secure-store",
+      "@react-native-vector-icons/material-design-icons",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
