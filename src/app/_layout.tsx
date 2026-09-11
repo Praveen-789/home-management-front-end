@@ -3,11 +3,13 @@ import { Stack, ThemeProvider } from 'expo-router';
 import { AppState, useColorScheme, View } from 'react-native';
 import { tokenExpiresAt } from '@/api/token';
 import { ActivityIndicator, PaperProvider } from 'react-native-paper';
+import { Provider as ReduxProvider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { darkTheme, lightTheme, navigationDarkTheme, navigationLightTheme } from '@/constants/app-theme';
 import { resolveDark } from '@/lib/color-scheme';
+import { store } from '@/redux/store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useThemeStore } from '@/stores/theme-store';
 
@@ -43,29 +45,31 @@ export default function RootLayout() {
   }, [session]);
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={theme}>
-        <ThemeProvider value={dark ? navigationDarkTheme : navigationLightTheme}>
-          <StatusBar style={dark ? 'light' : 'dark'} />
-          {!ready || !themeReady ? (
-            <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background }}>
-              <ActivityIndicator accessibilityLabel="Restoring session" />
-            </View>
-          ) : (
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Protected guard={!!session}>
-                <Stack.Screen name="(app)" />
-              </Stack.Protected>
-              <Stack.Protected guard={!session}>
-                <Stack.Screen name="login" />
-                <Stack.Screen name="register" />
-              </Stack.Protected>
-              <Stack.Screen name="explore" />
-            </Stack>
-          )}
-        </ThemeProvider>
-      </PaperProvider>
-    </SafeAreaProvider>
+    <ReduxProvider store={store}>
+      <SafeAreaProvider>
+        <PaperProvider theme={theme}>
+          <ThemeProvider value={dark ? navigationDarkTheme : navigationLightTheme}>
+            <StatusBar style={dark ? 'light' : 'dark'} />
+            {!ready || !themeReady ? (
+              <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background }}>
+                <ActivityIndicator accessibilityLabel="Restoring session" />
+              </View>
+            ) : (
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Protected guard={!!session}>
+                  <Stack.Screen name="(app)" />
+                </Stack.Protected>
+                <Stack.Protected guard={!session}>
+                  <Stack.Screen name="login" />
+                  <Stack.Screen name="register" />
+                </Stack.Protected>
+                <Stack.Screen name="explore" />
+              </Stack>
+            )}
+          </ThemeProvider>
+        </PaperProvider>
+      </SafeAreaProvider>
+    </ReduxProvider>
   );
 }
 

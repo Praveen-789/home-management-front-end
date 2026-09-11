@@ -1,10 +1,15 @@
+import usePushOnce from '@/hooks/use-push-once';
 import AuthShell from '@/components/auth/auth-shell';
 import { useAuthStore } from '@/stores/auth-store';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Button, HelperText, Text, TextInput } from 'react-native-paper';
+import { StyleSheet, View, type TextInput as NativeTextInput } from 'react-native';
+import { Button, HelperText, Icon, Text, TextInput, useTheme } from 'react-native-paper';
 
 export default function LoginScreen() {
+  const { push, navigating } = usePushOnce();
+  const { colors } = useTheme();
+  const passwordInput = useRef<NativeTextInput>(null);
   const { registered } = useLocalSearchParams<{ registered?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,12 +35,31 @@ export default function LoginScreen() {
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to your HomeHub account.">
-      {registered === '1' && <Text accessibilityLiveRegion="polite">Account created. You can now sign in.</Text>}
-      <TextInput label="Email" mode="outlined" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" disabled={loading} />
-      <TextInput label="Password" mode="outlined" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoComplete="current-password" disabled={loading} onSubmitEditing={submit} returnKeyType="go" right={<TextInput.Icon icon={visible ? 'eye-off' : 'eye'} accessibilityLabel={visible ? 'Hide password' : 'Show password'} onPress={() => setVisible(!visible)} />} />
+      {registered === '1' && <View style={[styles.success, { backgroundColor: colors.primaryContainer }]}>
+        <Icon source="check-circle-outline" size={22} color={colors.onPrimaryContainer} />
+        <Text style={[styles.successText, { color: colors.onPrimaryContainer }]} accessibilityLiveRegion="polite">Account created. You can now sign in.</Text>
+      </View>}
+      <TextInput label="Email address" mode="outlined" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" disabled={loading || navigating} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => passwordInput.current?.focus()} left={<TextInput.Icon icon="email-outline" />} style={{ backgroundColor: colors.elevation.level1 }} outlineStyle={styles.inputOutline} />
+      <TextInput ref={passwordInput} label="Password" mode="outlined" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" disabled={loading || navigating} onSubmitEditing={submit} returnKeyType="go" left={<TextInput.Icon icon="lock-outline" />} style={{ backgroundColor: colors.elevation.level1 }} outlineStyle={styles.inputOutline} right={<TextInput.Icon icon={visible ? 'eye-off' : 'eye'} accessibilityLabel={visible ? 'Hide password' : 'Show password'} onPress={() => setVisible(!visible)} />} />
       {!!error && <HelperText type="error" accessibilityLiveRegion="polite">{error}</HelperText>}
-      <Button mode="contained" onPress={submit} loading={loading} disabled={loading} contentStyle={{ height: 50 }}>Sign in</Button>
-      <Button disabled={loading} onPress={() => router.push('/register')}>New here? Create an account</Button>
+      <Button mode="contained" onPress={submit} loading={loading} disabled={loading || navigating} style={styles.button} contentStyle={styles.buttonContent} labelStyle={styles.buttonLabel}>Sign in</Button>
+      <View style={styles.dividerRow}>
+        <View style={[styles.divider, { backgroundColor: colors.surfaceVariant }]} />
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>New to HomeHub?</Text>
+        <View style={[styles.divider, { backgroundColor: colors.surfaceVariant }]} />
+      </View>
+      <Button mode="outlined" disabled={loading || navigating} style={[styles.button, { borderColor: colors.outline }]} contentStyle={styles.buttonContent} onPress={() => push('/register')}>Create an account</Button>
     </AuthShell>
   );
 }
+
+const styles = StyleSheet.create({
+  inputOutline: { borderRadius: 14 },
+  button: { borderRadius: 14 },
+  buttonContent: { minHeight: 52 },
+  buttonLabel: { fontWeight: '700', fontSize: 16 },
+  success: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderRadius: 14 },
+  successText: { flex: 1 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
+  divider: { flex: 1, height: 1 },
+});

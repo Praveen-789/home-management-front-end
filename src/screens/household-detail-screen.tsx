@@ -1,7 +1,8 @@
+import usePushOnce from '@/hooks/use-push-once';
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Button, Dialog, Divider, FAB, HelperText, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Appbar, Button, Card, Dialog, FAB, HelperText, Icon, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
 import type { Member } from '@/api/households';
 import AppShell from '@/components/app-shell';
 import MemberRow from '@/components/member-row';
@@ -14,6 +15,7 @@ import { useHouseholdStore } from '@/stores/household-store';
 const LOAD_ERROR = 'Could not load this household.';
 
 export default function HouseholdDetailScreen() {
+  const { push, navigating } = usePushOnce();
   const { householdId = '' } = useLocalSearchParams<{ householdId: string }>();
   const theme = useTheme();
   const userId = useAuthStore((state) => state.session?.user.id);
@@ -29,6 +31,8 @@ export default function HouseholdDetailScreen() {
 
   const household = households?.find((item) => item.id === householdId);
   const role = household?.role;
+  const openTasks = () => push({ pathname: '/households/[householdId]/tasks', params: { householdId } });
+  const openExpenses = () => push({ pathname: '/households/[householdId]/expenses', params: { householdId } });
 
   useEffect(() => {
     // A deep link can arrive before the list is loaded, and the list is what carries the caller's role.
@@ -75,7 +79,15 @@ export default function HouseholdDetailScreen() {
   }
 
   return (
-    <AppShell title={household?.name ?? 'Household'} back>
+    <AppShell
+      title={household?.name ?? 'Household'}
+      back
+      actions={
+        <>
+          <Appbar.Action icon="format-list-checks" accessibilityLabel="Tasks" disabled={navigating} onPress={openTasks} />
+          <Appbar.Action icon="cash-multiple" accessibilityLabel="Expenses" disabled={navigating} onPress={openExpenses} />
+        </>
+      }>
       {!members ? (
         error
           ? <StatusMessage text={error} action="Try again" onAction={refresh} loading={refreshing} />
@@ -86,23 +98,55 @@ export default function HouseholdDetailScreen() {
           keyExtractor={(member) => member.id}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-          ItemSeparatorComponent={() => <Divider />}
           ListHeaderComponent={
             <View style={styles.header}>
-              <Text variant="titleMedium">Members ({members.length})</Text>
-              {role && <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>Your role: {ROLE_LABELS[role]}</Text>}
+              <View style={[styles.hero, { backgroundColor: theme.colors.primaryContainer }]}>
+                <View style={styles.heroTop}>
+                  <Icon source="home-heart" size={36} color={theme.colors.onPrimaryContainer} />
+                  {role && <View style={[styles.role, { backgroundColor: theme.colors.background }]}><Text variant="labelMedium" style={{ color: theme.colors.primary }}>Your role: {ROLE_LABELS[role]}</Text></View>}
+                </View>
+                <Text variant="headlineMedium" style={[styles.heading, { color: theme.colors.onPrimaryContainer }]}>{household?.name ?? 'Your household'}</Text>
+                <Text variant="bodyLarge" style={{ color: theme.colors.onPrimaryContainer }}>Your shared space for everyday life.</Text>
+                <View style={styles.memberCount}>
+                  <Icon source="account-group-outline" size={20} color={theme.colors.onPrimaryContainer} />
+                  <Text variant="labelLarge" style={{ color: theme.colors.onPrimaryContainer }}>{members.length} {members.length === 1 ? 'member' : 'members'} at home</Text>
+                </View>
+              </View>
+              <Text variant="titleLarge" style={styles.heading}>Around the house</Text>
+              <View style={styles.features}>
+                <Card mode="contained" style={[styles.feature, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]} disabled={navigating} onPress={openTasks} accessibilityLabel="Open tasks">
+                  <View style={styles.featureContent}>
+                    <Icon source="format-list-checks" size={28} color={theme.colors.primary} />
+                    <Text variant="titleMedium" style={styles.heading}>Tasks</Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Share the to-dos</Text>
+                    <Icon source="arrow-right" size={20} color={theme.colors.primary} />
+                  </View>
+                </Card>
+                <Card mode="contained" style={[styles.feature, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]} disabled={navigating} onPress={openExpenses} accessibilityLabel="Open expenses">
+                  <View style={styles.featureContent}>
+                    <Icon source="cash-multiple" size={28} color={theme.colors.primary} />
+                    <Text variant="titleMedium" style={styles.heading}>Expenses</Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Keep costs in check</Text>
+                    <Icon source="arrow-right" size={20} color={theme.colors.primary} />
+                  </View>
+                </Card>
+              </View>
+              <View style={styles.sectionHeading}>
+                <Text variant="titleLarge" style={styles.heading}>The people at home</Text>
+                <View style={[styles.count, { backgroundColor: theme.colors.surfaceVariant }]}><Text variant="labelLarge">{members.length}</Text></View>
+              </View>
               {!!error && <HelperText type="error" accessibilityLiveRegion="polite">{error}</HelperText>}
             </View>
           }
           renderItem={({ item }) => (
-            <MemberRow
+            <View style={[styles.memberCard, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]}><MemberRow
               member={item}
               actorRole={role}
               isSelf={item.user.id === userId}
-              disabled={busy}
+              disabled={busy || navigating}
               onChangeRole={(newRole) => changeRole(item, newRole)}
               onRemove={() => setRemoval(item)}
-            />
+            /></View>
           )}
         />
       )}
@@ -111,8 +155,8 @@ export default function HouseholdDetailScreen() {
           icon="account-plus"
           label="Add member"
           style={styles.fab}
-          disabled={busy}
-          onPress={() => router.push({ pathname: '/households/[householdId]/add-member', params: { householdId } })}
+          disabled={busy || navigating}
+          onPress={() => push({ pathname: '/households/[householdId]/add-member', params: { householdId } })}
         />
       )}
       <Portal>
@@ -134,7 +178,18 @@ export default function HouseholdDetailScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center' },
-  list: { paddingVertical: 8, paddingBottom: 96, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  header: { paddingHorizontal: 16, paddingVertical: 8, gap: 4 },
-  fab: { position: 'absolute', right: 16, bottom: 16 },
+  list: { padding: 20, paddingBottom: 112, width: '100%', maxWidth: 720, alignSelf: 'center', gap: 10 },
+  header: { gap: 16, marginBottom: 4 },
+  hero: { padding: 24, borderRadius: 28, gap: 12, marginBottom: 8 },
+  heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  heading: { fontWeight: '700' },
+  role: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
+  memberCount: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  features: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  feature: { flex: 1, minWidth: 140, borderRadius: 22, borderWidth: 1 },
+  featureContent: { padding: 20, gap: 8 },
+  sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 12 },
+  count: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  memberCard: { borderRadius: 20, borderWidth: 1, paddingVertical: 4 },
+  fab: { position: 'absolute', right: 20, bottom: 20, borderRadius: 20 },
 });

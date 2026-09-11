@@ -1,3 +1,4 @@
+import { startTiming } from '@/lib/performance-timing';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
@@ -29,6 +30,7 @@ type RequestOptions = { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: obj
 // Sends JSON to the API and returns the parsed body. Throws ApiError for HTTP failures and a
 // plain Error with a safe message for timeouts and network problems.
 export async function apiRequest(path: string, { method = 'GET', body, token }: RequestOptions = {}): Promise<unknown> {
+  const finishTiming = startTiming(`API ${method} (including body parsing)`);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
@@ -54,5 +56,6 @@ export async function apiRequest(path: string, { method = 'GET', body, token }: 
     throw error;
   } finally {
     clearTimeout(timeout);
+    finishTiming();
   }
 }

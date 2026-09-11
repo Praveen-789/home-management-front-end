@@ -1,6 +1,6 @@
 # HomeHub households
 
-Signed-in users land on their household list. Data comes from the backend's household endpoints, documented in `D:\HomeHub\backend\API.md`.
+Signed-in users land on their household list. Data comes from the backend's household endpoints, documented in `D:\HomeHub\backend\API.md`. Each household's task list is described in `TASKS.md` and its expenses in `EXPENSES.md`.
 
 ## Flow
 

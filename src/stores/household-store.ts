@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import { isApiError } from '@/api/client';
 import * as householdsApi from '@/api/households';
 import type { Household, Member } from '@/api/households';
 import type { AssignableRole } from '@/lib/household-permissions';
 import { useAuthStore } from '@/stores/auth-store';
+import { withToken } from '@/stores/with-token';
 
-export const SESSION_EXPIRED = 'Your session has expired. Please sign in again.';
+export { SESSION_EXPIRED } from '@/stores/with-token';
 
 type HouseholdState = {
   // null until the first successful load, so screens can tell "loading" from "none".
@@ -19,22 +19,6 @@ type HouseholdState = {
   removeMember: (householdId: string, userId: string) => Promise<void>;
   reset: () => void;
 };
-
-// Runs an API call with the current token. A 401 means the backend rejected the token, so the
-// session is cleared and the protected routes return the user to login.
-async function withToken<Result>(call: (token: string) => Promise<Result>): Promise<Result> {
-  const session = useAuthStore.getState().session;
-  if (!session) throw new Error(SESSION_EXPIRED);
-  try {
-    return await call(session.token);
-  } catch (error) {
-    if (isApiError(error) && error.status === 401) {
-      useAuthStore.getState().logout().catch(() => useAuthStore.setState({ session: null }));
-      throw new Error(SESSION_EXPIRED);
-    }
-    throw error;
-  }
-}
 
 const initialState = { households: null, membersByHousehold: {} };
 
