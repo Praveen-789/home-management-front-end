@@ -12,6 +12,8 @@ The app uses the Expo development host address for native API requests. If neede
 
 - `src/screens/login-screen.tsx`: `useState` holds form input, errors and loading. The submit handler calls the store's login action.
 - `src/screens/register-screen.tsx`: validates input, posts registration, returns to login on success. Passwords are never saved.
+- `src/screens/forgot-password-screen.tsx` and `reset-password-screen.tsx`: the two steps of a password reset, described below.
+- `src/lib/password-reset.ts`: the email, code and password rules the reset screens apply, mirroring the backend. Pure functions, tested in Node.
 - `src/api/client.ts`: backend URL, fetch requests, timeout, bearer header and safe network error messages.
 - `src/api/auth.ts`: register and login requests, the error messages they may show, and session validation.
 - `src/stores/auth-store.ts`: Zustand shares the user/session, restores it and handles login/logout. Native storage uses Expo SecureStore. Web stays in memory and requires login after reload.
@@ -20,7 +22,14 @@ The app uses the Expo development host address for native API requests. If neede
 - `src/components/auth/auth-shell.tsx`: shared safe-area, keyboard-aware layout and styling.
 - `src/app/(app)/_layout.tsx`: stack for signed-in screens. The household screens are described in `HOUSEHOLDS.md`.
 
-Registration uses `POST /api/auth/register` and then asks the user to log in. Login uses `POST /api/auth/login`. No password-reset endpoint exists yet. Email is trimmed but not lowercased, matching the backend's current case-sensitive behavior.
+Registration uses `POST /api/auth/register` and then asks the user to log in. Login uses `POST /api/auth/login`. Email is trimmed but not lowercased, matching the backend's current case-sensitive behavior. Passwords must be 8 to 72 characters; the app checks first and the backend enforces it.
+
+## Forgot password
+
+1. "Forgot password?" under the password field opens a screen asking for the email address. Sending it calls `POST /api/auth/forgot-password`, which answers the same way whether or not the address is registered, so the next screen always opens.
+2. The reset screen takes the six-digit code from the email plus the new password twice. It calls `POST /api/auth/reset-password`; a wrong, expired or used code shows the backend's "Invalid or expired code". Success returns to login with a confirmation banner.
+3. "Resend code" waits out the backend's 60-second cooldown with a countdown, then requests a fresh code; only the newest code works. "I already have a code" on the first screen skips straight to the second for someone who closed the app in between.
+4. Codes live for 15 minutes and die after five wrong tries. Existing sessions on other devices are not signed out by a reset.
 
 ## Manual checks
 
@@ -32,9 +41,13 @@ Registration uses `POST /api/auth/register` and then asks the user to log in. Lo
 - Logout clears the saved native session and returns to login.
 - Offline/unreachable API requests show an error; buttons recover after failure.
 - Check password visibility, small screens, large text and keyboard scrolling on a device.
+- Forgot password with an unregistered email still opens the code screen; a registered one receives the email within a few seconds.
+- A wrong code, a short password and mismatched passwords each show an error without leaving the screen; the right code returns to login with the banner and the new password signs in.
+- Resend is disabled with a countdown right after a code is sent and works once it reaches zero; the old code then no longer works.
 
 Use `npx tsc --noEmit` for TypeScript checks after Expo has regenerated route types (`npm start`).
 
 Expo web uses localhost:3000 for the API by default. The backend allows web origins http://localhost:8081 and http://localhost:8082. Set backend WEB_ORIGINS to a comma-separated list for other preview/deployed origins.
 
 Token-expiry unit tests: `node --experimental-strip-types --test tests/token.test.mjs` (Node 22+).
+Reset rules: `node --experimental-strip-types --test tests/password-reset.test.mjs`.

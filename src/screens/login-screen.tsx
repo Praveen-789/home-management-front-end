@@ -10,7 +10,7 @@ export default function LoginScreen() {
   const { push, navigating } = usePushOnce();
   const { colors } = useTheme();
   const passwordInput = useRef<NativeTextInput>(null);
-  const { registered } = useLocalSearchParams<{ registered?: string }>();
+  const { registered, reset } = useLocalSearchParams<{ registered?: string; reset?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -35,12 +35,15 @@ export default function LoginScreen() {
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to your HomeHub account.">
-      {registered === '1' && <View style={[styles.success, { backgroundColor: colors.primaryContainer }]}>
+      {(registered === '1' || reset === '1') && <View style={[styles.success, { backgroundColor: colors.primaryContainer }]}>
         <Icon source="check-circle-outline" size={22} color={colors.onPrimaryContainer} />
-        <Text style={[styles.successText, { color: colors.onPrimaryContainer }]} accessibilityLiveRegion="polite">Account created. You can now sign in.</Text>
+        <Text style={[styles.successText, { color: colors.onPrimaryContainer }]} accessibilityLiveRegion="polite">
+          {reset === '1' ? 'Password updated. Sign in with your new password.' : 'Account created. You can now sign in.'}
+        </Text>
       </View>}
       <TextInput label="Email address" mode="outlined" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" disabled={loading || navigating} returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => passwordInput.current?.focus()} left={<TextInput.Icon icon="email-outline" />} style={{ backgroundColor: colors.elevation.level1 }} outlineStyle={styles.inputOutline} />
       <TextInput ref={passwordInput} label="Password" mode="outlined" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" disabled={loading || navigating} onSubmitEditing={submit} returnKeyType="go" left={<TextInput.Icon icon="lock-outline" />} style={{ backgroundColor: colors.elevation.level1 }} outlineStyle={styles.inputOutline} right={<TextInput.Icon icon={visible ? 'eye-off' : 'eye'} accessibilityLabel={visible ? 'Hide password' : 'Show password'} onPress={() => setVisible(!visible)} />} />
+      <Button compact disabled={loading || navigating} style={styles.forgot} onPress={() => push({ pathname: '/forgot-password', params: email.trim() ? { email: email.trim() } : {} })}>Forgot password?</Button>
       {!!error && <HelperText type="error" accessibilityLiveRegion="polite">{error}</HelperText>}
       <Button mode="contained" onPress={submit} loading={loading} disabled={loading || navigating} style={styles.button} contentStyle={styles.buttonContent} labelStyle={styles.buttonLabel}>Sign in</Button>
       <View style={styles.dividerRow}>
@@ -60,6 +63,7 @@ const styles = StyleSheet.create({
   buttonLabel: { fontWeight: '700', fontSize: 16 },
   success: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderRadius: 14 },
   successText: { flex: 1 },
+  forgot: { alignSelf: 'flex-end', marginTop: -8 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
   divider: { flex: 1, height: 1 },
 });

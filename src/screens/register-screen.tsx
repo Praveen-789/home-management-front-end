@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Button, HelperText, TextInput } from 'react-native-paper';
 import AuthShell from '@/components/auth/auth-shell';
 import { authRequest } from '@/api/auth';
+import { passwordProblem } from '@/lib/password-reset';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -20,7 +21,8 @@ export default function RegisterScreen() {
       setError('Enter your name, a valid email address, and a password.');
       return;
     }
-    if (password !== confirmPassword) { setError('Your passwords do not match.'); return; }
+    const problem = passwordProblem(password, confirmPassword);
+    if (problem) { setError(problem); return; }
     pending.current = true;
     setLoading(true);
     setError('');
