@@ -2,7 +2,8 @@ import usePushOnce from '@/hooks/use-push-once';
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Button, Chip, Dialog, List, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, Chip, List, Snackbar, Text, useTheme } from 'react-native-paper';
+import AppDialog from '@/components/ui/app-dialog';
 import { isApiError } from '@/api/client';
 import AppShell, { goBack } from '@/components/app-shell';
 import StatusMessage from '@/components/status-message';
@@ -173,18 +174,17 @@ export default function ExpenseDetailScreen() {
       ) : (
         !!role && <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>Only the person who paid or recorded this, or an owner or admin, can change it.</Text>
       )}
-      <Portal>
-        <Dialog visible={confirmingDelete} onDismiss={() => setConfirmingDelete(false)}>
-          <Dialog.Title>Delete this expense?</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">{`${formatAmount(expense.amount)} for ${expense.description ?? CATEGORY_LABELS[expense.category].toLowerCase()} will be removed for everyone in the household. This cannot be undone.`}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setConfirmingDelete(false)}>Cancel</Button>
-            <Button textColor={colors.error} onPress={confirmDelete}>Delete</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <AppDialog
+        visible={confirmingDelete}
+        onDismiss={() => setConfirmingDelete(false)}
+        icon="trash-can-outline"
+        tone="danger"
+        title="Delete this expense?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+      >
+        {`${formatAmount(expense.amount)} for ${expense.description ?? CATEGORY_LABELS[expense.category].toLowerCase()} will be removed for everyone in the household. This cannot be undone.`}
+      </AppDialog>
       <Snackbar visible={!!notice} onDismiss={() => setNotice('')} duration={4000}>{notice}</Snackbar>
     </AppShell>
   );

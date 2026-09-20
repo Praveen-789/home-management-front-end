@@ -31,19 +31,24 @@ The reducers stay small because the cache rules are pure functions in `src/lib/t
 ## Read the code in this order
 
 - `src/lib/task-permissions.ts`: statuses, priorities, labels, and the owner/admin/creator/assignee rules copied from the backend, so the UI hides actions the API would refuse. The backend still decides.
-- `src/lib/task-helpers.ts`: the backend's sort order, filter matching, overdue detection, the YYYY-MM-DD form helpers, and the cache rules the reducers call. Pure functions, tested in Node.
+- `src/lib/task-helpers.ts`: the backend's sort order, filter matching, overdue detection, the date picker's conversions, and the cache rules the reducers call. Pure functions, tested in Node.
 - `src/api/tasks.ts`: typed requests and response validation for the five task endpoints, including the list's `status`, `page` and `limit` query.
 - `src/stores/with-token.ts`: the token wrapper shared by the Zustand household store and the Redux task thunks. A 401 signs the user out.
 - `src/redux/tasks-slice.ts`, `src/redux/store.ts`, `src/redux/hooks.ts`: the Redux pieces described above. Page 1 replaces a household's list, later pages append, and a late reply for a filter the user already left is dropped by comparing request IDs.
-- `src/app/(app)/households/[householdId]/tasks/`: the routes; each re-exports a screen.
+- `src/app/(app)/(stack)/households/[householdId]/tasks/`: the routes; each re-exports a screen.
 - `src/screens/tasks-screen.tsx`: filter chips, list, pull to refresh, load more, the quick-done checkbox and the New task button.
-- `src/screens/task-form-screen.tsx`: create and edit in one form. The due date is typed as YYYY-MM-DD or set from the Today, Tomorrow and In a week chips. The assignee picker uses the household's members.
+- `src/screens/task-form-screen.tsx`: create and edit in one form. The due date comes from a date picker or the Today, Tomorrow and In a week chips; a No date chip clears it. The assignee picker uses the household's members.
+- `src/components/date-field.tsx` and its `.android` and `.web` siblings: the date picker, one file per platform. Metro picks the file by its suffix, and `date-field.types.ts` holds the props all three share.
 - `src/screens/task-detail-screen.tsx`: details, status control, edit and delete with confirmation.
 - `src/components/task-row.tsx`: a row with its checkbox, due date, priority and assignee.
 
 ## Due dates
 
-The app sends the start of the chosen day in the device's time zone and shows Today, Tomorrow, Yesterday or a short date. A task is overdue when its due day has passed and it is not done; the due date then shows in the error colour. A date picker can replace the text field later; `react-native-paper-dates` matches the Paper theme.
+The app sends the start of the chosen day in the device's time zone and shows Today, Tomorrow, Yesterday or a short date. A task is overdue when its due day has passed and it is not done; the due date then shows in the error colour.
+
+The date picker comes from `@expo/ui`, which was already installed, and each platform gets its own native control: Android opens the Material 3 calendar dialog, iOS unfolds the SwiftUI calendar under the button, and web uses the browser's date input because `@expo/ui`'s picker renders nothing there.
+
+Android's dialog counts days in UTC, while the app counts them in the device's time zone. Local midnight on 22 September in India is 18:30 UTC on the 21st, so an unconverted date would open the dialog a day early. `localDayAsUtc` and `utcDayAsLocal` carry the calendar day across, and their test runs in time zones on both sides of UTC.
 
 ## Manual checks
 
@@ -51,11 +56,14 @@ The app sends the start of the chosen day in the device's time zone and shows To
 - Filter chips: each shows only that status and its count; an empty filter offers "Show all tasks".
 - More than 20 tasks: scrolling loads the next page; pull to refresh returns to the first page.
 - Checkbox: marking done under the To do filter removes the row and lowers the count; under All it strikes the title through and re-sorts.
+- The removed row fades out and the rows below glide up (see "Motion" in `HOUSEHOLDS.md`). Switching filter chips swaps the list at once, with no fading.
 - A member sees no Edit or Delete on a task they did not create, and no status control unless assigned to it.
 - The assignee can change status on the detail screen; the other fields are not editable for them.
 - An owner or admin can edit and delete any task; deleting asks for confirmation and returns to the list.
 - Assigning someone who has since left the household shows the backend's message and keeps the form.
-- Invalid due date text shows an error without submitting; the Today, Tomorrow and In a week chips fill it; the clear icon empties it.
+- The due date button opens the calendar on the task's current date, or on today when it has none; the saved task shows the day that was tapped. Cancelling the dialog changes nothing.
+- The Today, Tomorrow and In a week chips set the date; the No date chip appears once a date is set and clears it.
+- With the app's theme set opposite to the device's, the calendar dialog follows the app.
 - Overdue tasks show the due date in the error colour in both themes; done tasks never show as overdue.
 - Deep link to a task or its edit form while signed in loads it and shows a back button.
 - After sign out and sign in as a different user, no tasks from the previous user remain.

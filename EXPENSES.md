@@ -24,7 +24,7 @@ The currency symbol is one constant, `CURRENCY_SYMBOL` in `src/lib/expense-helpe
 - `src/lib/expense-helpers.ts`: amount formatting and parsing, the backend's sort order, filter matching, and the cache rules the store uses. Pure functions that return new objects, tested in Node.
 - `src/api/expenses.ts`: typed requests and response validation for the six expense endpoints, including the list's filters and paging and the summary's shape.
 - `src/stores/expense-store.ts`: Zustand store holding every expense seen by ID, one loaded list per household, and the last totals per household. Page 1 replaces a household's list, later pages append, and a late reply for a filter the user already left is dropped. Any change drops the household's totals so the list fetches fresh ones. A 401 signs the user out. The store resets when the signed-in user changes.
-- `src/app/(app)/households/[householdId]/expenses/`: the routes; each re-exports a screen.
+- `src/app/(app)/(stack)/households/[householdId]/expenses/`: the routes; each re-exports a screen.
 - `src/screens/expenses-screen.tsx`: totals card, category chips, list, pull to refresh, load more, the task filter banner and the New expense button.
 - `src/screens/expense-form-screen.tsx`: create and edit in one form. The payer picker uses the household's members; the task picker reads the task endpoint directly rather than the task screens' Redux store, so the two features stay separate.
 - `src/screens/expense-detail-screen.tsx`: details, link to the task, edit and delete with confirmation.

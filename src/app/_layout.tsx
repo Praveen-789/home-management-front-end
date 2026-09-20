@@ -6,6 +6,8 @@ import { ActivityIndicator, PaperProvider } from 'react-native-paper';
 import { Provider as ReduxProvider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { fontAssets } from '@/constants/fonts';
 import * as SystemUI from 'expo-system-ui';
 import { darkTheme, lightTheme, navigationDarkTheme, navigationLightTheme } from '@/constants/app-theme';
 import { resolveDark } from '@/lib/color-scheme';
@@ -20,6 +22,9 @@ export default function RootLayout() {
   const preference = useThemeStore((state) => state.preference);
   const themeReady = useThemeStore((state) => state.ready);
   const restoreTheme = useThemeStore((state) => state.restore);
+  // A load error still lets the app start. Text then falls back to the system font.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+  const fontsReady = fontsLoaded || !!fontError;
   const deviceScheme = useColorScheme();
   const dark = resolveDark(preference, deviceScheme);
   const theme = dark ? darkTheme : lightTheme;
@@ -50,7 +55,7 @@ export default function RootLayout() {
         <PaperProvider theme={theme}>
           <ThemeProvider value={dark ? navigationDarkTheme : navigationLightTheme}>
             <StatusBar style={dark ? 'light' : 'dark'} />
-            {!ready || !themeReady ? (
+            {!ready || !themeReady || !fontsReady ? (
               <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background }}>
                 <ActivityIndicator accessibilityLabel="Restoring session" />
               </View>

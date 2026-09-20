@@ -13,12 +13,17 @@ export function isHouseholdRole(value: unknown): value is HouseholdRole {
   return HOUSEHOLD_ROLES.includes(value as HouseholdRole);
 }
 
+export function isAssignableRole(value: unknown): value is AssignableRole {
+  return ASSIGNABLE_ROLES.includes(value as AssignableRole);
+}
+
 // Owners and admins may manage members at all.
 export function canManageMembers(actor: HouseholdRole): boolean {
   return actor !== 'MEMBER';
 }
 
-// Roles the actor may hand out when adding a member or changing one.
+// Roles the actor may hand out when inviting a member or changing one. Cancelling a pending
+// invitation follows the same rule against the invitation's role.
 export function canAssignRole(actor: HouseholdRole, role: AssignableRole): boolean {
   return actor === 'OWNER' || (actor === 'ADMIN' && role === 'MEMBER');
 }

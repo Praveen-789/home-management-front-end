@@ -26,6 +26,14 @@ export async function resetPassword(email: string, code: string, password: strin
   await apiRequest('/auth/reset-password', { method: 'POST', body: { email, code, password } });
 }
 
+export async function googleSignIn(idToken: string) {
+  return apiRequest('/auth/google', { method: 'POST', body: { idToken } });
+}
+
+export async function linkGoogleAccount(token: string, idToken: string, password: string) {
+  return apiRequest('/auth/google/link', { method: 'POST', token, body: { idToken, password } });
+}
+
 export function isSession(value: unknown): value is Session {
   const session = value as Session | null;
   return !!session && typeof session.token === 'string' && !!session.token &&

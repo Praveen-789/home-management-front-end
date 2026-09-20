@@ -5,6 +5,7 @@ import { Button, HelperText, TextInput, useTheme } from 'react-native-paper';
 import { requestPasswordReset } from '@/api/auth';
 import AuthShell from '@/components/auth/auth-shell';
 import { isEmail } from '@/lib/password-reset';
+import { fonts } from '@/constants/fonts';
 
 // Step one of a reset: ask for the code. The backend answers the same way for any address, so
 // the next screen opens regardless and the person is told to check their inbox there.
@@ -65,5 +66,5 @@ const styles = StyleSheet.create({
   inputOutline: { borderRadius: 14 },
   button: { borderRadius: 14 },
   buttonContent: { minHeight: 52 },
-  buttonLabel: { fontWeight: '700', fontSize: 16 },
+  buttonLabel: { fontFamily: fonts.bold, fontSize: 16 },
 });

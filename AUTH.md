@@ -20,7 +20,7 @@ The app uses the Expo development host address for native API requests. If neede
 - `src/api/token.ts`: reads JWT expiry. This does not verify signatures; authorization remains the backend's responsibility.
 - `src/app/_layout.tsx`: light/dark theme selection (see `THEME.md`), session restoration, token expiry and protected routes.
 - `src/components/auth/auth-shell.tsx`: shared safe-area, keyboard-aware layout and styling.
-- `src/app/(app)/_layout.tsx`: stack for signed-in screens. The household screens are described in `HOUSEHOLDS.md`.
+- `src/app/(app)/_layout.tsx`: the signed-in area: a drawer for the side menu around the stack of screens in `(stack)`. The side menu and the household screens are described in `HOUSEHOLDS.md`.
 
 Registration uses `POST /api/auth/register` and then asks the user to log in. Login uses `POST /api/auth/login`. Email is trimmed but not lowercased, matching the backend's current case-sensitive behavior. Passwords must be 8 to 72 characters; the app checks first and the backend enforces it.
 
@@ -51,3 +51,16 @@ Expo web uses localhost:3000 for the API by default. The backend allows web orig
 
 Token-expiry unit tests: `node --experimental-strip-types --test tests/token.test.mjs` (Node 22+).
 Reset rules: `node --experimental-strip-types --test tests/password-reset.test.mjs`.
+
+
+## Google sign-in (Android development build)
+
+Login and registration now offer Continue with Google. The native account chooser returns an ID token; POST /api/auth/google exchanges it for a HomeHub JWT. Both login methods share session validation and SecureStore persistence. Cancelling makes no backend request. Google tokens and passwords are never persisted.
+
+For an existing password account, sign in normally, open the side menu on Your households and tap Link Google account. Enter the current HomeHub password and select the matching Google account. POST /api/auth/google/link uses the current HomeHub bearer token. Linking preserves data and allows both login methods.
+
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID must match the backend GOOGLE_CLIENT_IDS Web OAuth client. It is a public identifier. Register com.praveen_dev.homehub and the installed build signing SHA-1 in an Android OAuth client. Apply the backend add_google_auth migration before testing.
+
+Rebuild after installing the native dependency: run npm run android from this directory. Start Metro with npx expo start --dev-client if needed. Restart Metro after changing .env. Native dependencies are autolinked; the config plugin also preserves setup for future prebuilds. Web/iOS Google buttons are hidden. Password login remains available in older builds.
+
+Manual checks: new Google signup, returning login, cancellation, account switching after logout, offline errors, session restore, and existing-email conflict followed by linking. Verify password registration/login/reset still work. Use a Google Play-enabled Android device/emulator. The backend verifies the token; frontend token decoding is not an authorization check.

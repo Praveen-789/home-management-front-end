@@ -9,7 +9,8 @@ const icons: Record<ThemePreference, string> = {
   dark: 'weather-night',
 };
 
-// Icon button that opens the appearance picker. Works inside an Appbar or on its own.
+// Icon button that opens the appearance picker on the signed-out screens. Once signed in, the side
+// menu offers the same choice.
 export default function ThemeMenu() {
   const [open, setOpen] = useState(false);
   const preference = useThemeStore((state) => state.preference);

@@ -1,3 +1,4 @@
+import GoogleLoginButton from '@/components/auth/google-login-button';
 import { useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { Button, HelperText, TextInput } from 'react-native-paper';
@@ -12,11 +13,12 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState('');
   const pending = useRef(false);
 
   async function submit() {
-    if (pending.current) return;
+    if (pending.current || googleBusy) return;
     if (!name.trim() || !/^\S+@\S+\.\S+$/.test(email.trim()) || !password) {
       setError('Enter your name, a valid email address, and a password.');
       return;
@@ -35,13 +37,14 @@ export default function RegisterScreen() {
 
   return (
     <AuthShell title="Make yourself at home" subtitle="Create an account to get started.">
-      <TextInput label="Full name" mode="outlined" value={name} onChangeText={setName} autoComplete="name" autoCapitalize="words" disabled={loading} />
-      <TextInput label="Email" mode="outlined" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" disabled={loading} />
-      <TextInput label="Password" mode="outlined" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoComplete="new-password" disabled={loading} right={<TextInput.Icon icon={visible ? 'eye-off' : 'eye'} accessibilityLabel={visible ? 'Hide passwords' : 'Show passwords'} onPress={() => setVisible(!visible)} />} />
-      <TextInput label="Confirm password" mode="outlined" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!visible} autoCapitalize="none" autoComplete="new-password" disabled={loading} onSubmitEditing={submit} returnKeyType="go" />
+      <TextInput label="Full name" mode="outlined" value={name} onChangeText={setName} autoComplete="name" autoCapitalize="words" disabled={loading || googleBusy} />
+      <TextInput label="Email" mode="outlined" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" disabled={loading || googleBusy} />
+      <TextInput label="Password" mode="outlined" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoComplete="new-password" disabled={loading || googleBusy} right={<TextInput.Icon icon={visible ? 'eye-off' : 'eye'} accessibilityLabel={visible ? 'Hide passwords' : 'Show passwords'} onPress={() => setVisible(!visible)} />} />
+      <TextInput label="Confirm password" mode="outlined" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!visible} autoCapitalize="none" autoComplete="new-password" disabled={loading || googleBusy} onSubmitEditing={submit} returnKeyType="go" />
       {!!error && <HelperText type="error" accessibilityLiveRegion="polite">{error}</HelperText>}
-      <Button mode="contained" onPress={submit} loading={loading} disabled={loading} contentStyle={{ height: 50 }}>Create account</Button>
-      <Button disabled={loading} onPress={() => router.replace('/login')}>Already have an account? Sign in</Button>
+      <Button mode="contained" onPress={submit} loading={loading} disabled={loading || googleBusy} contentStyle={{ height: 50 }}>Create account</Button>
+      <Button disabled={loading || googleBusy} onPress={() => router.replace('/login')}>Already have an account? Sign in</Button>
+      <GoogleLoginButton disabled={loading} onBusyChange={setGoogleBusy} />
     </AuthShell>
   );
 }

@@ -12,8 +12,10 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useHouseholdStore } from '@/stores/household-store';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Chip, Divider, FAB, HelperText, Snackbar, Text } from 'react-native-paper';
+import Animated from 'react-native-reanimated';
+import { rowExit, rowShift } from '@/constants/motion';
 
 const LOAD_ERROR = 'Could not load the tasks.';
 const FILTERS: TaskFilter[] = ['ALL', 'TODO', 'IN_PROGRESS', 'DONE'];
@@ -113,7 +115,12 @@ export default function TasksScreen() {
           ? <StatusMessage text="No tasks yet. Add the first chore for your household." action="New task" loading={navigating} onAction={openCreate} />
           : <StatusMessage text={`No tasks are ${FILTER_LABELS[filter].toLowerCase()}.`} action="Show all tasks" onAction={() => changeFilter('ALL')} />
       ) : (
-        <FlatList
+        // Marking a task done under "To do" takes its row out of the list. The row fades and the rest
+        // glide up. A filter change swaps the whole list, and skipEnteringExitingAnimations keeps
+        // that swap instant rather than fading every row.
+        <Animated.FlatList
+          itemLayoutAnimation={rowShift}
+          skipEnteringExitingAnimations
           data={tasks}
           keyExtractor={(task) => task.id}
           contentContainerStyle={styles.list}
@@ -129,13 +136,15 @@ export default function TasksScreen() {
           }
           ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} accessibilityLabel="Loading more tasks" /> : null}
           renderItem={({ item }) => (
-            <TaskRow
-              task={item}
-              canToggle={!!role && !!userId && canChangeStatus(role, item, userId)}
-              disabled={busyId !== null || navigating}
-              onToggle={(done) => void toggle(item, done)}
-              onPress={() => openTask(item)}
-            />
+            <Animated.View exiting={rowExit}>
+              <TaskRow
+                task={item}
+                canToggle={!!role && !!userId && canChangeStatus(role, item, userId)}
+                disabled={busyId !== null || navigating}
+                onToggle={(done) => void toggle(item, done)}
+                onPress={() => openTask(item)}
+              />
+            </Animated.View>
           )}
         />
       )}

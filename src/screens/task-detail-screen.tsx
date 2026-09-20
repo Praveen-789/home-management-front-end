@@ -2,7 +2,8 @@ import usePushOnce from '@/hooks/use-push-once';
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Button, Chip, Dialog, HelperText, Icon, List, Portal, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, Chip, HelperText, Icon, List, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
+import AppDialog from '@/components/ui/app-dialog';
 import AppShell, { goBack } from '@/components/app-shell';
 import StatusMessage from '@/components/status-message';
 import ImageGrid from '@/components/image-grid';
@@ -16,6 +17,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { addTaskImage, deleteTask, isNotFound, loadTask, removeTaskImage, selectTask, updateTask } from '@/redux/tasks-slice';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHouseholdStore } from '@/stores/household-store';
+import { fonts } from '@/constants/fonts';
 
 const LOAD_ERROR = 'Could not load this task.';
 
@@ -225,18 +227,17 @@ export default function TaskDetailScreen() {
           </Button>
         </View>
       )}
-      <Portal>
-        <Dialog visible={confirmingDelete} onDismiss={() => setConfirmingDelete(false)}>
-          <Dialog.Title>Delete this task?</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">{`"${task.title}" will be removed for everyone in the household. This cannot be undone.`}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setConfirmingDelete(false)}>Cancel</Button>
-            <Button textColor={colors.error} onPress={confirmDelete}>Delete</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <AppDialog
+        visible={confirmingDelete}
+        onDismiss={() => setConfirmingDelete(false)}
+        icon="trash-can-outline"
+        tone="danger"
+        title="Delete this task?"
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+      >
+        {`"${task.title}" will be removed for everyone in the household. This cannot be undone.`}
+      </AppDialog>
       <Snackbar visible={!!notice} onDismiss={() => setNotice('')} duration={4000}>{notice}</Snackbar>
     </AppShell>
   );
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
   hero: { padding: 22, borderRadius: 26, gap: 16 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   eyebrow: { letterSpacing: 1.2, flex: 1 },
-  heading: { fontWeight: '700' },
+  heading: { fontFamily: fonts.bold },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statusSection: { gap: 12, paddingVertical: 4 },
   panel: { padding: 20, borderRadius: 22, borderWidth: 1, gap: 12 },

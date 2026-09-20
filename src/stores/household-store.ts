@@ -14,7 +14,6 @@ type HouseholdState = {
   loadHouseholds: () => Promise<void>;
   createHousehold: (name: string) => Promise<Household>;
   loadMembers: (householdId: string) => Promise<void>;
-  addMember: (householdId: string, email: string, role: AssignableRole) => Promise<Member>;
   updateMemberRole: (householdId: string, userId: string, role: AssignableRole) => Promise<Member>;
   removeMember: (householdId: string, userId: string) => Promise<void>;
   reset: () => void;
@@ -37,11 +36,6 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
   loadMembers: async (householdId) => {
     const members = await withToken((token) => householdsApi.listMembers(token, householdId));
     set({ membersByHousehold: { ...get().membersByHousehold, [householdId]: members } });
-  },
-  addMember: async (householdId, email, role) => {
-    const member = await withToken((token) => householdsApi.addMember(token, householdId, email, role));
-    updateMembers(householdId, (members) => [...members, member]);
-    return member;
   },
   updateMemberRole: async (householdId, userId, role) => {
     const updated = await withToken((token) => householdsApi.updateMemberRole(token, householdId, userId, role));

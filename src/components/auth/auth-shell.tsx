@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { Icon, Surface, Text, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ThemeMenu from '@/components/theme-menu';
+import { fonts } from '@/constants/fonts';
 
 export default function AuthShell({ children, title, subtitle }: PropsWithChildren<{ title: string; subtitle: string }>) {
   const { colors } = useTheme();
@@ -50,10 +51,10 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   brandIdentity: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  brand: { fontWeight: '700', letterSpacing: 0.3 },
+  brand: { fontFamily: fonts.bold, letterSpacing: 0.3 },
   hero: { padding: 24, borderRadius: 28, gap: 12, marginBottom: 20 },
   eyebrow: { letterSpacing: 1.8 },
-  heading: { fontWeight: '700' },
+  heading: { fontFamily: fonts.bold },
   tagline: { lineHeight: 25 },
   features: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12 },

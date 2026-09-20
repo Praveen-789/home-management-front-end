@@ -48,7 +48,23 @@ export function formatDueDate(iso: string, now = new Date()): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }) });
 }
 
-// The form takes due dates as YYYY-MM-DD. Blank means no due date (null); anything unparseable is undefined.
+// The form's date button spells the day out, e.g. "Tue, 22 Sep 2026".
+export function formatFullDate(date: Date): string {
+  return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Android's Material date picker counts days in UTC: it reads the UTC day of the date it is given and
+// answers with UTC midnight of the chosen day. The app counts days in the device's time zone, so these
+// two carry the calendar day across. Without them, India (UTC+5:30) would open on the day before.
+export function localDayAsUtc(date: Date): Date {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+}
+
+export function utcDayAsLocal(date: Date): Date {
+  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+// A browser's date input speaks YYYY-MM-DD. Blank means no due date (null); anything unparseable is undefined.
 export function parseDateInput(text: string): Date | null | undefined {
   const trimmed = text.trim();
   if (!trimmed) return null;

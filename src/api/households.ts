@@ -52,11 +52,6 @@ function readMember(data: unknown): Member {
   return member;
 }
 
-// The backend resolves the email to an existing account; unknown emails return 404 "User not found".
-export async function addMember(token: string, householdId: string, email: string, role: AssignableRole): Promise<Member> {
-  return readMember(await apiRequest(membersPath(householdId), { method: 'POST', body: { email, role }, token }));
-}
-
 export async function updateMemberRole(token: string, householdId: string, userId: string, role: AssignableRole): Promise<Member> {
   return readMember(await apiRequest(memberPath(householdId, userId), { method: 'PATCH', body: { role }, token }));
 }

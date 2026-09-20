@@ -1,18 +1,29 @@
 import usePushOnce from '@/hooks/use-push-once';
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Appbar, Button, Card, Dialog, FAB, HelperText, Icon, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { RefreshControl, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, ReduceMotion } from 'react-native-reanimated';
+import { ActivityIndicator, Card, FAB, HelperText, Icon, Snackbar, Text, useTheme } from 'react-native-paper';
+import HeaderAction from '@/components/header-action';
+import AppDialog from '@/components/ui/app-dialog';
 import type { Member } from '@/api/households';
 import AppShell from '@/components/app-shell';
 import MemberRow from '@/components/member-row';
+import NotificationBell from '@/components/notification-bell';
+import PendingInvitationRow from '@/components/pending-invitation-row';
 import StatusMessage from '@/components/status-message';
 import { errorMessage } from '@/lib/errors';
-import { canManageMembers, ROLE_LABELS, type AssignableRole } from '@/lib/household-permissions';
+import { canManageMember, canManageMembers, ROLE_LABELS, type AssignableRole } from '@/lib/household-permissions';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHouseholdStore } from '@/stores/household-store';
+import { useInvitationStore } from '@/stores/invitation-store';
+import { fonts } from '@/constants/fonts';
+import { rowExit, rowShift } from '@/constants/motion';
 
 const LOAD_ERROR = 'Could not load this household.';
+const heroEnter = FadeInDown.duration(280).reduceMotion(ReduceMotion.System);
+const featuresEnter = FadeInDown.duration(280).delay(80).reduceMotion(ReduceMotion.System);
+const rowEnter = FadeIn.duration(220).reduceMotion(ReduceMotion.System);
 
 export default function HouseholdDetailScreen() {
   const { push, navigating } = usePushOnce();
@@ -23,6 +34,7 @@ export default function HouseholdDetailScreen() {
   const members = useHouseholdStore((state) => state.membersByHousehold[householdId]);
   const updateMemberRole = useHouseholdStore((state) => state.updateMemberRole);
   const removeMember = useHouseholdStore((state) => state.removeMember);
+  const invitations = useInvitationStore((state) => state.sentByHousehold[householdId]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -39,6 +51,8 @@ export default function HouseholdDetailScreen() {
     const { households, loadHouseholds, loadMembers } = useHouseholdStore.getState();
     const load = households === null ? loadHouseholds().then(() => loadMembers(householdId)) : loadMembers(householdId);
     load.catch((error: unknown) => setError(errorMessage(error, LOAD_ERROR)));
+    // Pending invitations are an extra; a failure only hides the section until the next refresh.
+    useInvitationStore.getState().loadSent(householdId).catch(() => {});
   }, [householdId]);
 
   async function refresh() {
@@ -46,7 +60,7 @@ export default function HouseholdDetailScreen() {
     setError('');
     try {
       const { loadHouseholds, loadMembers } = useHouseholdStore.getState();
-      await Promise.all([loadHouseholds(), loadMembers(householdId)]);
+      await Promise.all([loadHouseholds(), loadMembers(householdId), useInvitationStore.getState().loadSent(householdId)]);
     } catch (error) { setError(errorMessage(error, LOAD_ERROR)); }
     finally { setRefreshing(false); }
   }
@@ -61,6 +75,10 @@ export default function HouseholdDetailScreen() {
 
   function changeRole(member: Member, newRole: AssignableRole) {
     void run(() => updateMemberRole(householdId, member.user.id, newRole), `${member.user.name} is now ${ROLE_LABELS[newRole].toLowerCase()}.`);
+  }
+
+  function cancelInvitation(invitationId: string, name: string) {
+    void run(() => useInvitationStore.getState().cancel(householdId, invitationId), `The invitation for ${name} was cancelled.`);
   }
 
   function confirmRemoval() {
@@ -84,8 +102,9 @@ export default function HouseholdDetailScreen() {
       back
       actions={
         <>
-          <Appbar.Action icon="format-list-checks" accessibilityLabel="Tasks" disabled={navigating} onPress={openTasks} />
-          <Appbar.Action icon="cash-multiple" accessibilityLabel="Expenses" disabled={navigating} onPress={openExpenses} />
+          <NotificationBell disabled={navigating} onPress={() => push('/notifications')} />
+          <HeaderAction icon="format-list-checks" accessibilityLabel="Tasks" disabled={navigating} onPress={openTasks} />
+          <HeaderAction icon="cash-multiple" accessibilityLabel="Expenses" disabled={navigating} onPress={openExpenses} />
         </>
       }>
       {!members ? (
@@ -93,14 +112,16 @@ export default function HouseholdDetailScreen() {
           ? <StatusMessage text={error} action="Try again" onAction={refresh} loading={refreshing} />
           : <ActivityIndicator style={styles.center} accessibilityLabel="Loading members" />
       ) : (
-        <FlatList
+        <Animated.FlatList
+          itemLayoutAnimation={rowShift}
+          skipEnteringExitingAnimations
           data={members}
           keyExtractor={(member) => member.id}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
           ListHeaderComponent={
             <View style={styles.header}>
-              <View style={[styles.hero, { backgroundColor: theme.colors.primaryContainer }]}>
+              <Animated.View entering={heroEnter} style={[styles.hero, { backgroundColor: theme.colors.primaryContainer }]}>
                 <View style={styles.heroTop}>
                   <Icon source="home-heart" size={36} color={theme.colors.onPrimaryContainer} />
                   {role && <View style={[styles.role, { backgroundColor: theme.colors.background }]}><Text variant="labelMedium" style={{ color: theme.colors.primary }}>Your role: {ROLE_LABELS[role]}</Text></View>}
@@ -111,9 +132,9 @@ export default function HouseholdDetailScreen() {
                   <Icon source="account-group-outline" size={20} color={theme.colors.onPrimaryContainer} />
                   <Text variant="labelLarge" style={{ color: theme.colors.onPrimaryContainer }}>{members.length} {members.length === 1 ? 'member' : 'members'} at home</Text>
                 </View>
-              </View>
+              </Animated.View>
               <Text variant="titleLarge" style={styles.heading}>Around the house</Text>
-              <View style={styles.features}>
+              <Animated.View entering={featuresEnter} style={styles.features}>
                 <Card mode="contained" style={[styles.feature, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]} disabled={navigating} onPress={openTasks} accessibilityLabel="Open tasks">
                   <View style={styles.featureContent}>
                     <Icon source="format-list-checks" size={28} color={theme.colors.primary} />
@@ -130,7 +151,7 @@ export default function HouseholdDetailScreen() {
                     <Icon source="arrow-right" size={20} color={theme.colors.primary} />
                   </View>
                 </Card>
-              </View>
+              </Animated.View>
               <View style={styles.sectionHeading}>
                 <Text variant="titleLarge" style={styles.heading}>The people at home</Text>
                 <View style={[styles.count, { backgroundColor: theme.colors.surfaceVariant }]}><Text variant="labelLarge">{members.length}</Text></View>
@@ -138,39 +159,54 @@ export default function HouseholdDetailScreen() {
               {!!error && <HelperText type="error" accessibilityLiveRegion="polite">{error}</HelperText>}
             </View>
           }
+          ListFooterComponent={invitations?.length ? (
+            <Animated.View entering={rowEnter} exiting={rowExit} layout={rowShift} style={styles.pending}>
+              <View style={styles.sectionHeading}>
+                <Text variant="titleLarge" style={styles.heading}>Waiting for an answer</Text>
+                <View style={[styles.count, { backgroundColor: theme.colors.surfaceVariant }]}><Text variant="labelLarge">{invitations.length}</Text></View>
+              </View>
+              {invitations.map((invitation) => (
+                <Animated.View key={invitation.id} entering={rowEnter} exiting={rowExit} layout={rowShift} style={[styles.memberCard, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]}><PendingInvitationRow
+                  invitation={invitation}
+                  canCancel={!!role && canManageMember(role, invitation.role)}
+                  disabled={busy || navigating}
+                  onCancel={() => cancelInvitation(invitation.id, invitation.invitedUser.name)}
+                /></Animated.View>
+              ))}
+            </Animated.View>
+          ) : null}
           renderItem={({ item }) => (
-            <View style={[styles.memberCard, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]}><MemberRow
+            <Animated.View entering={rowEnter} exiting={rowExit} style={[styles.memberCard, { backgroundColor: theme.colors.elevation.level1, borderColor: theme.colors.surfaceVariant }]}><MemberRow
               member={item}
               actorRole={role}
               isSelf={item.user.id === userId}
               disabled={busy || navigating}
               onChangeRole={(newRole) => changeRole(item, newRole)}
               onRemove={() => setRemoval(item)}
-            /></View>
+            /></Animated.View>
           )}
         />
       )}
       {role && canManageMembers(role) && (
         <FAB
           icon="account-plus"
-          label="Add member"
+          label="Invite member"
           style={styles.fab}
           disabled={busy || navigating}
           onPress={() => push({ pathname: '/households/[householdId]/add-member', params: { householdId } })}
         />
       )}
-      <Portal>
-        <Dialog visible={!!removal} onDismiss={() => setRemoval(null)}>
-          <Dialog.Title>Remove {removal?.user.name ?? 'this member'}?</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">They will lose access to {household?.name ?? 'this household'}. Their account is not affected.</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setRemoval(null)}>Cancel</Button>
-            <Button textColor={theme.colors.error} onPress={confirmRemoval}>Remove</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <AppDialog
+        visible={!!removal}
+        onDismiss={() => setRemoval(null)}
+        icon="account-remove-outline"
+        tone="danger"
+        title={`Remove ${removal?.user.name ?? 'this member'}?`}
+        confirmLabel="Remove"
+        onConfirm={confirmRemoval}
+      >
+        {`They will lose access to ${household?.name ?? 'this household'}. Their account is not affected.`}
+      </AppDialog>
       <Snackbar visible={!!notice} onDismiss={() => setNotice('')} duration={4000}>{notice}</Snackbar>
     </AppShell>
   );
@@ -182,7 +218,7 @@ const styles = StyleSheet.create({
   header: { gap: 16, marginBottom: 4 },
   hero: { padding: 24, borderRadius: 28, gap: 12, marginBottom: 8 },
   heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  heading: { fontWeight: '700' },
+  heading: { fontFamily: fonts.bold },
   role: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   memberCount: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   features: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -190,6 +226,7 @@ const styles = StyleSheet.create({
   featureContent: { padding: 20, gap: 8 },
   sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 12 },
   count: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  pending: { gap: 10, marginTop: 6 },
   memberCard: { borderRadius: 20, borderWidth: 1, paddingVertical: 4 },
   fab: { position: 'absolute', right: 20, bottom: 20, borderRadius: 20 },
 });

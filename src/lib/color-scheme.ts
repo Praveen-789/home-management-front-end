@@ -8,6 +8,13 @@ export const THEME_PREFERENCE_LABELS: Record<ThemePreference, string> = {
   dark: 'Dark',
 };
 
+// One-word versions for tight spots, such as the side menu's three-way switch.
+export const THEME_PREFERENCE_SHORT_LABELS: Record<ThemePreference, string> = {
+  system: 'Device',
+  light: 'Light',
+  dark: 'Dark',
+};
+
 export function isThemePreference(value: unknown): value is ThemePreference {
   return THEME_PREFERENCES.includes(value as ThemePreference);
 }

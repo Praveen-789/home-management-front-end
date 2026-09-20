@@ -4,9 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Chip, HelperText, Menu, SegmentedButtons, Text, TextInput, useTheme } from 'react-native-paper';
 import type { Task, TaskInput } from '@/api/tasks';
 import AppShell, { goBack } from '@/components/app-shell';
+import DateField from '@/components/date-field';
 import StatusMessage from '@/components/status-message';
 import { errorMessage } from '@/lib/errors';
-import { addDays, dueDateToIso, parseDateInput, toDateInput } from '@/lib/task-helpers';
+import { addDays, dueDateToIso } from '@/lib/task-helpers';
 import { isTaskPriority, PRIORITY_LABELS, TASK_PRIORITIES, type TaskPriority } from '@/lib/task-permissions';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { createTask, loadTask, selectTask, updateTask } from '@/redux/tasks-slice';
@@ -51,11 +52,11 @@ function TaskForm({ householdId, task }: { householdId: string; task?: Task }) {
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 'MEDIUM');
-  const [dueDate, setDueDate] = useState(task?.dueDate ? toDateInput(new Date(task.dueDate)) : '');
+  const [dueDate, setDueDate] = useState<Date | null>(task?.dueDate ? new Date(task.dueDate) : null);
   const [assigneeId, setAssigneeId] = useState<string | null>(task?.assignedTo?.id ?? null);
   const [assigneeMenu, setAssigneeMenu] = useState(false);
   const [membersError, setMembersError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<{ title?: string; dueDate?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string }>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const pending = useRef(false);
@@ -72,24 +73,20 @@ function TaskForm({ householdId, task }: { householdId: string; task?: Task }) {
   const assigneeName = assignee ? assignee.user.name : assigneeId ? (task?.assignedTo?.name ?? 'Former member') : 'Unassigned';
 
   function pickDueDate(daysFromToday: number | null) {
-    setDueDate(daysFromToday === null ? '' : toDateInput(addDays(new Date(), daysFromToday)));
-    setFieldErrors((current) => ({ ...current, dueDate: undefined }));
+    setDueDate(daysFromToday === null ? null : addDays(new Date(), daysFromToday));
   }
 
   async function submit() {
     if (pending.current) return;
     const trimmedTitle = title.trim();
-    const parsedDate = parseDateInput(dueDate);
-    const errors: typeof fieldErrors = {};
-    if (!trimmedTitle) errors.title = 'Enter a title for the task.';
-    if (parsedDate === undefined) errors.dueDate = 'Enter the due date as YYYY-MM-DD, or leave it blank.';
-    setFieldErrors(errors);
-    if (!trimmedTitle || parsedDate === undefined) return;
+    // The due date needs no check: a picker can only hand back a real date or none.
+    setFieldErrors(trimmedTitle ? {} : { title: 'Enter a title for the task.' });
+    if (!trimmedTitle) return;
     const input: TaskInput & { title: string } = {
       title: trimmedTitle,
       description: description.trim() || null,
       priority,
-      dueDate: parsedDate ? dueDateToIso(parsedDate) : null,
+      dueDate: dueDate ? dueDateToIso(dueDate) : null,
       assignedToId: assigneeId,
     };
     pending.current = true;
@@ -126,23 +123,13 @@ function TaskForm({ householdId, task }: { householdId: string; task?: Task }) {
         />
       </View>
       <View style={styles.field}>
-        <TextInput
-          label="Due date (YYYY-MM-DD)"
-          mode="outlined"
-          value={dueDate}
-          onChangeText={setDueDate}
-          placeholder={toDateInput(new Date())}
-          autoCapitalize="none"
-          autoCorrect={false}
-          disabled={loading}
-          error={!!fieldErrors.dueDate}
-          right={dueDate ? <TextInput.Icon icon="close" accessibilityLabel="Clear due date" onPress={() => pickDueDate(null)} /> : undefined}
-        />
-        {!!fieldErrors.dueDate && <HelperText type="error" accessibilityLiveRegion="polite">{fieldErrors.dueDate}</HelperText>}
+        <Text variant="labelLarge">Due date</Text>
+        <DateField label="Due date" value={dueDate} onChange={setDueDate} placeholder="No due date" disabled={loading} />
         <View style={styles.chips}>
           <Chip compact icon="calendar-today" disabled={loading} onPress={() => pickDueDate(0)}>Today</Chip>
           <Chip compact icon="calendar-arrow-right" disabled={loading} onPress={() => pickDueDate(1)}>Tomorrow</Chip>
           <Chip compact icon="calendar-week" disabled={loading} onPress={() => pickDueDate(7)}>In a week</Chip>
+          {dueDate && <Chip compact icon="calendar-remove" disabled={loading} onPress={() => pickDueDate(null)}>No date</Chip>}
         </View>
       </View>
       <View style={styles.field}>

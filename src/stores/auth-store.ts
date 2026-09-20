@@ -2,7 +2,7 @@ import { tokenExpiresAt } from '@/api/token';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { authRequest, isSession, type Session } from '@/api/auth';
+import { authRequest, googleSignIn, isSession, type Session } from '@/api/auth';
 
 const storageKey = 'homehub-session';
 type AuthState = {
@@ -10,6 +10,7 @@ type AuthState = {
   ready: boolean;
   restoreSession: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -34,12 +35,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   login: async (email, password) => {
     const data: unknown = await authRequest('login', { email, password });
-    if (!isSession(data) || tokenExpiresAt(data.token) <= Date.now()) throw new Error('Unexpected login response. Please try again.');
-    const session = { token: data.token, user: data.user };
-    if (Platform.OS !== 'web') {
-      try { await SecureStore.setItemAsync(storageKey, JSON.stringify(session)); }
-      catch { throw new Error('Could not save your session. Please try again.'); }
-    }
+    const session = await saveSession(data);
+    set({ session });
+  },
+  loginWithGoogle: async (idToken) => {
+    const data = await googleSignIn(idToken);
+    const session = await saveSession(data);
     set({ session });
   },
   logout: async () => {
@@ -51,3 +52,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
+
+// Both login methods validate and persist the same HomeHub session.
+async function saveSession(data: unknown): Promise<Session> {
+  if (!isSession(data) || tokenExpiresAt(data.token) <= Date.now()) throw new Error('Unexpected login response. Please try again.');
+  const session = { token: data.token, user: data.user };
+  if (Platform.OS !== 'web') {
+    try { await SecureStore.setItemAsync(storageKey, JSON.stringify(session)); }
+    catch { throw new Error('Could not save your session. Please try again.'); }
+  }
+  return session;
+}

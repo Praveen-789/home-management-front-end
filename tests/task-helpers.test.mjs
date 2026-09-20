@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  addDays, compareTasks, daysUntil, dueDateToIso, formatDueDate, isOverdue, matchesFilter, parseDateInput, toDateInput,
+  addDays, compareTasks, daysUntil, dueDateToIso, formatDueDate, isOverdue, localDayAsUtc, matchesFilter, parseDateInput, toDateInput,
+  utcDayAsLocal,
 } from '../src/lib/task-helpers.ts';
 
 const task = (id, dueDate, createdAt, status = 'TODO') => ({ id, dueDate, createdAt, status });
@@ -70,4 +71,20 @@ test('round-trips between the form text, a Date, and the ISO string sent to the 
   const iso = dueDateToIso(new Date(2026, 8, 8, 17, 45));
   assert.equal(toDateInput(new Date(iso)), '2026-09-08');
   assert.equal(new Date(iso).getHours(), 0);
+});
+
+test('carries the calendar day to and from the UTC days that the Android date picker uses', () => {
+  const deviceZone = process.env.TZ;
+  try {
+    // One zone ahead of UTC and one behind it: a conversion that only suits India would fail New York.
+    for (const zone of ['Asia/Kolkata', 'America/New_York', 'UTC']) {
+      process.env.TZ = zone;
+      assert.equal(localDayAsUtc(new Date(2026, 8, 22, 17, 45)).toISOString(), '2026-09-22T00:00:00.000Z', zone);
+      const picked = utcDayAsLocal(new Date('2026-09-22T00:00:00.000Z'));
+      assert.deepEqual([picked.getFullYear(), picked.getMonth(), picked.getDate(), picked.getHours()], [2026, 8, 22, 0], zone);
+    }
+  } finally {
+    if (deviceZone === undefined) delete process.env.TZ;
+    else process.env.TZ = deviceZone;
+  }
 });

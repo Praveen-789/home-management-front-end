@@ -5,6 +5,7 @@ import { Button, HelperText, Icon, Text, TextInput, useTheme } from 'react-nativ
 import { requestPasswordReset, resetPassword } from '@/api/auth';
 import AuthShell from '@/components/auth/auth-shell';
 import { isCompleteCode, isEmail, normalizeCode, passwordProblem, resendWait } from '@/lib/password-reset';
+import { fonts } from '@/constants/fonts';
 
 // Step two of a reset: the emailed code plus the new password. `sentAt` arrives from the previous
 // screen so the resend button can wait out the backend's cooldown instead of failing silently.
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   inputOutline: { borderRadius: 14 },
   button: { borderRadius: 14 },
   buttonContent: { minHeight: 52 },
-  buttonLabel: { fontWeight: '700', fontSize: 16 },
+  buttonLabel: { fontFamily: fonts.bold, fontSize: 16 },
   notice: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderRadius: 14 },
   noticeText: { flex: 1 },
 });

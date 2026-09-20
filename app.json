@@ -42,7 +42,8 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to take photos for tasks and expenses."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,
