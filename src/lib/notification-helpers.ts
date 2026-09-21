@@ -6,11 +6,12 @@ import type { Pagination } from '@/api/tasks';
 // The backend's event list. A type this app does not know yet still renders, with a plain bell.
 export const NOTIFICATION_TYPES = [
   'TASK_ASSIGNED', 'TASK_COMPLETED', 'EXPENSE_ADDED', 'EXPENSE_UPDATED',
-  'HOUSEHOLD_INVITATION', 'INVITATION_DECLINED', 'MEMBER_JOINED', 'MEMBER_REMOVED',
+  'HOUSEHOLD_INVITATION', 'INVITATION_DECLINED', 'MEMBER_JOINED', 'MEMBER_REMOVED', 'CHAT_MESSAGE',
 ] as const;
 export type NotificationType = typeof NOTIFICATION_TYPES[number];
 
 const ICONS: Record<NotificationType, string> = {
+  CHAT_MESSAGE: 'chat-outline',
   TASK_ASSIGNED: 'clipboard-account-outline',
   TASK_COMPLETED: 'clipboard-check-outline',
   EXPENSE_ADDED: 'cash-plus',
@@ -28,6 +29,7 @@ export function notificationIcon(type: string): string {
 // Where tapping a notification leads, or null when it has nowhere to go: a row saved before the
 // backend recorded targets, a deleted household, or a type this app does not know.
 export type NotificationTarget =
+  | { kind: 'chat'; householdId: string; conversationId: string }
   | { kind: 'task'; householdId: string; taskId: string }
   | { kind: 'expense'; householdId: string; expenseId: string }
   | { kind: 'household'; householdId: string }
@@ -37,6 +39,7 @@ export type NotificationTarget =
 export function notificationTarget(notification: { type: string; householdId: string | null; entityId: string | null }): NotificationTarget | null {
   const { type, householdId, entityId } = notification;
   if (!householdId) return null;
+  if (type === 'CHAT_MESSAGE') return entityId ? { kind: 'chat', householdId, conversationId: entityId } : null;
   if (type.startsWith('TASK_')) return entityId ? { kind: 'task', householdId, taskId: entityId } : null;
   if (type.startsWith('EXPENSE_')) return entityId ? { kind: 'expense', householdId, expenseId: entityId } : null;
   if (type === 'HOUSEHOLD_INVITATION') return entityId ? { kind: 'invitation', householdId, invitationId: entityId } : null;

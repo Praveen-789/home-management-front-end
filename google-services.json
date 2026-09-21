@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "114821497494",
+    "project_id": "homehub-16c85",
+    "storage_bucket": "homehub-16c85.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:114821497494:android:ffefd5a4b1ea6e46e278b7",
+        "android_client_info": {
+          "package_name": "com.praveen_dev.homehub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaHcBrqWXMunC91DdSkh5tAeXEkIwEI3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

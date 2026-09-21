@@ -16,7 +16,11 @@
         "foregroundImage": "./assets/images/homehub-logo-source.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.praveen_dev.homehub"
+      "package": "com.praveen_dev.homehub",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -28,11 +32,18 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#026F5B",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-logo.png",
           "imageWidth": 200
         }
       ],
       "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#026F5B"
+        }
+      ],
       "@react-native-vector-icons/material-design-icons",
       "expo-image",
       [
@@ -48,6 +59,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0f23eae9-283c-41ee-9d76-6e1d4ac95ead"
+      }
     }
   }
 }

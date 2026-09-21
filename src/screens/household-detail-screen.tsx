@@ -152,6 +152,15 @@ export default function HouseholdDetailScreen() {
                   </View>
                 </Card>
               </Animated.View>
+              <Card mode="contained" style={{ borderRadius: 22, backgroundColor: theme.colors.primaryContainer }} disabled={navigating}
+                onPress={() => push({ pathname: '/chats', params: { householdId } })} accessibilityLabel="Open household chats">
+                <View style={[styles.featureContent, { flexDirection: 'row', alignItems: 'center', gap: 16 }]}>
+                  <Icon source="chat-outline" size={30} color={theme.colors.primary} />
+                  <View style={{ flex: 1, gap: 4 }}><Text variant="titleMedium" style={styles.heading}>Chats</Text>
+                    <Text variant="bodyMedium">Catch up together, or talk one to one.</Text></View>
+                  <Icon source="arrow-right" size={22} color={theme.colors.primary} />
+                </View>
+              </Card>
               <View style={styles.sectionHeading}>
                 <Text variant="titleLarge" style={styles.heading}>The people at home</Text>
                 <View style={[styles.count, { backgroundColor: theme.colors.surfaceVariant }]}><Text variant="labelLarge">{members.length}</Text></View>

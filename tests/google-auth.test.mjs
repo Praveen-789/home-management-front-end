@@ -65,11 +65,12 @@ test('Google login persists only HomeHub session and rejects invalid responses/s
   let state = {};
   const saved = [];
   const { useAuthStore: store } = load('../src/stores/auth-store.ts', {
+    '@/lib/push-registration': { unregisterPush: async () => {} },
     '@/api/token': { tokenExpiresAt: () => Date.now() + 10000 },
     'expo-secure-store': { setItemAsync: async (key, value) => { if (failStorage) throw new Error('storage'); saved.push(JSON.parse(value)); } },
     'react-native': { Platform: { OS: 'android' } },
     zustand: { create: factory => factory(update => Object.assign(state, update)) },
-    '@/api/auth': { googleSignIn: async () => result, isSession: value => !!value?.token && !!value?.user },
+    '@/api/auth': { googleSignIn: async () => result, isSession: value => !!value?.token && !!value?.user, SESSION_STORAGE_KEY: 'homehub-session' },
   });
   await store.loginWithGoogle('google-token');
   assert.deepEqual(saved[0], { token: result.token, user: result.user });

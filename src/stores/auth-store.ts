@@ -1,10 +1,10 @@
+import { unregisterPush } from '@/lib/push-registration';
 import { tokenExpiresAt } from '@/api/token';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { authRequest, googleSignIn, isSession, type Session } from '@/api/auth';
+import { authRequest, googleSignIn, isSession, SESSION_STORAGE_KEY as storageKey, type Session } from '@/api/auth';
 
-const storageKey = 'homehub-session';
 type AuthState = {
   session: Session | null;
   ready: boolean;
@@ -15,7 +15,7 @@ type AuthState = {
 };
 
 // Native sessions use encrypted storage. Web sessions stay in memory only.
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   ready: false,
   restoreSession: async () => {
@@ -44,6 +44,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ session });
   },
   logout: async () => {
+    const token = get().session?.token;
+    if (token) await unregisterPush(token);
     if (Platform.OS !== 'web') {
       try { await SecureStore.deleteItemAsync(storageKey); }
       catch { throw new Error('Could not clear your saved session. Please try again.'); }

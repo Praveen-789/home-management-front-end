@@ -1,3 +1,4 @@
+import ChatRuntime from '@/components/chat-runtime';
 import SideMenu from '@/components/side-menu';
 import useUnreadCountSync from '@/hooks/use-unread-count-sync';
 import { usePathname } from 'expo-router';
@@ -13,16 +14,19 @@ export default function AppLayout() {
   const atHome = usePathname() === '/';
 
   return (
-    <Drawer
-      drawerContent={(props) => <SideMenu {...props} />}
-      screenOptions={{
-        // AppShell draws each screen's header, including the menu button.
-        headerShown: false,
-        drawerType: 'front',
-        drawerStyle: { backgroundColor: colors.elevation.level1, width: 304 },
-        // Deeper screens keep the left edge for the back swipe.
-        swipeEnabled: atHome,
-      }}
-    />
+    <>
+      <ChatRuntime />
+      <Drawer
+        drawerContent={(props) => <SideMenu {...props} />}
+        screenOptions={{
+          // AppShell draws each screen's header, including the menu button.
+          headerShown: false,
+          drawerType: 'front',
+          drawerStyle: { backgroundColor: colors.elevation.level1, width: 304 },
+          // Deeper screens keep the left edge for the back swipe.
+          swipeEnabled: atHome,
+        }}
+      />
+    </>
   );
 }

@@ -22,8 +22,8 @@ const LOAD_ERROR = 'Could not load your notifications.';
 const FILTERS: { value: InboxFilter; label: string }[] = [{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }];
 
 // The signed-in user's inbox across every household. Tapping a row marks it read and opens the
-// task, expense or household it is about; the destination screen explains a target that has since
-// been deleted or a household the user has left.
+// task, expense or household it is about; a chat row is removed instead. The destination screen
+// explains a target that has since been deleted or a household the user has left.
 export default function NotificationsScreen() {
   const { push, navigating } = usePushOnce();
   const list = useNotificationStore((state) => state.list);
@@ -78,11 +78,16 @@ export default function NotificationsScreen() {
   }
 
   async function open(notification: Notification) {
-    if (!notification.isRead) {
+    const target = notificationTarget(notification);
+    // A chat alert only points at unread messages, so opening it removes it rather than keeping a
+    // read row that still says "unread". The backend does the same when the chat is read elsewhere.
+    if (target?.kind === 'chat') {
+      useNotificationStore.getState().deleteNotification(notification.id)
+        .catch((error: unknown) => setNotice(errorMessage(error, 'Could not clear the chat notification.')));
+    } else if (!notification.isRead) {
       useNotificationStore.getState().markRead(notification.id)
         .catch((error: unknown) => setNotice(errorMessage(error, 'Could not mark the notification as read.')));
     }
-    const target = notificationTarget(notification);
     if (!target) return;
     if (target.kind === 'invitation') {
       // The notification outlives its invitation, which is deleted once answered or cancelled. So
@@ -103,7 +108,8 @@ export default function NotificationsScreen() {
     if (households && !households.some((household) => household.id === target.householdId)) {
       await loadHouseholds().catch(() => {});
     }
-    if (target.kind === 'task') push({ pathname: '/households/[householdId]/tasks/[taskId]', params: { householdId: target.householdId, taskId: target.taskId } });
+    if (target.kind === 'chat') push({ pathname: '/chats/[conversationId]', params: { conversationId: target.conversationId } });
+    else if (target.kind === 'task') push({ pathname: '/households/[householdId]/tasks/[taskId]', params: { householdId: target.householdId, taskId: target.taskId } });
     else if (target.kind === 'expense') push({ pathname: '/households/[householdId]/expenses/[expenseId]', params: { householdId: target.householdId, expenseId: target.expenseId } });
     else push({ pathname: '/households/[householdId]', params: { householdId: target.householdId } });
   }

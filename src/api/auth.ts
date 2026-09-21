@@ -4,6 +4,9 @@ export { API_URL } from '@/api/client';
 
 export type User = { id: string; name: string; email: string };
 export type Session = { token: string; user: User };
+// Where a phone keeps its session. It is shared because a notification button can wake the app with
+// no screen and no store loaded, and the reply still has to be sent as the signed-in user.
+export const SESSION_STORAGE_KEY = 'homehub-session';
 
 // Registration currently exposes backend errors; only show known messages.
 const knownMessages = ['User already exists', 'Invalid email or password', 'Password must be at least 8 characters'];

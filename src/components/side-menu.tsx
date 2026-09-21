@@ -65,6 +65,7 @@ export default function SideMenu({ navigation }: DrawerContentComponentProps) {
         </View>
 
         <Drawer.Section>
+          <Drawer.Item label="Chats" icon="chat-outline" active={pathname.startsWith('/chats')} onPress={() => choose(() => router.navigate('/chats'))} />
           <Drawer.Item label="Households" icon="home-outline" active={pathname === '/' || pathname.startsWith('/households')} onPress={() => choose(() => { if (pathname !== '/') router.dismissTo('/'); })} />
           {/* navigate, not push: a quick second tap finds the screen already open instead of stacking a copy. */}
           <Drawer.Item

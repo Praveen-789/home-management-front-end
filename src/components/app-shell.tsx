@@ -14,6 +14,9 @@ type Props = PropsWithChildren<{
   menu?: boolean;
   // Shows a back button. With no history (a deep link) it returns to the household list instead.
   back?: boolean;
+  // Replaces the menu or back button with a close button, for a temporary mode such as selecting
+  // rows. Closing leaves the mode, not the screen.
+  onClose?: () => void;
   actions?: ReactNode;
   // Wraps children in a keyboard-aware scroll view for forms. Lists manage their own scrolling.
   scroll?: boolean;
@@ -26,7 +29,7 @@ export function goBack() {
 
 // Layout for signed-in screens: a header bar plus a full-height body. The header handles the
 // status bar inset itself, so the safe area only covers the other edges.
-export default function AppShell({ title, menu, back, actions, scroll, children }: Props) {
+export default function AppShell({ title, menu, back, onClose, actions, scroll, children }: Props) {
   const { colors } = useTheme();
   const header = useHeaderColors();
   const navigation = useNavigation();
@@ -36,8 +39,9 @@ export default function AppShell({ title, menu, back, actions, scroll, children 
       <StatusBar style="light" />
       <Appbar.Header style={{ backgroundColor: header.background }}>
         {/* This screen lives in the stack, which has no drawer. The action travels up to the drawer around it. */}
-        {menu && <Appbar.Action icon="menu" color={header.foreground} accessibilityLabel="Open menu" onPress={() => navigation.dispatch(DrawerActions.openDrawer())} />}
-        {back && <Appbar.BackAction onPress={goBack} color={header.foreground} accessibilityLabel="Go back" />}
+        {onClose && <Appbar.Action icon="close" color={header.foreground} accessibilityLabel="Cancel selection" onPress={onClose} />}
+        {!onClose && menu && <Appbar.Action icon="menu" color={header.foreground} accessibilityLabel="Open menu" onPress={() => navigation.dispatch(DrawerActions.openDrawer())} />}
+        {!onClose && back && <Appbar.BackAction onPress={goBack} color={header.foreground} accessibilityLabel="Go back" />}
         <Appbar.Content title={title} titleStyle={[styles.title, { color: header.foreground }]} />
         {actions}
       </Appbar.Header>
