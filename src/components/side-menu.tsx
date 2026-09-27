@@ -2,11 +2,12 @@ import { useState } from 'react';
 import Constants from 'expo-constants';
 import { router, usePathname } from 'expo-router';
 import { DrawerContentScrollView, type DrawerContentComponentProps } from 'expo-router/drawer';
-import { Platform, StyleSheet, View } from 'react-native';
-import { Avatar, Badge, Drawer, Portal, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Badge, Drawer, Icon, Portal, SegmentedButtons, Snackbar, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinkGoogleDialog from '@/components/auth/link-google-dialog';
 import AppDialog from '@/components/ui/app-dialog';
+import UserAvatar from '@/components/user-avatar';
 import { fonts } from '@/constants/fonts';
 import { useHeaderColors } from '@/hooks/use-header-colors';
 import { isThemePreference, THEME_PREFERENCE_LABELS, THEME_PREFERENCE_SHORT_LABELS, THEME_PREFERENCES } from '@/lib/color-scheme';
@@ -15,9 +16,6 @@ import { unreadLabel } from '@/lib/notification-helpers';
 import { useAuthStore } from '@/stores/auth-store';
 import { useNotificationStore } from '@/stores/notification-store';
 import { useThemeStore } from '@/stores/theme-store';
-
-// "Praveen Kumar" becomes "PK". Array.from keeps an emoji or accented letter in one piece.
-const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((word) => Array.from(word)[0]?.toUpperCase() ?? '').join('');
 
 // What the drawer shows: who is signed in, where they can go, and the account options that used to
 // crowd the home header. The drawer keeps this mounted while it is closed, so the dialogs below
@@ -55,14 +53,20 @@ export default function SideMenu({ navigation }: DrawerContentComponentProps) {
     <>
       <DrawerContentScrollView contentContainerStyle={styles.content}>
         {/* The drawer slides under the status bar, whose icons AppShell keeps white for the green
-            header. This block continues that green, so the clock stays readable in light mode too. */}
-        <View style={[styles.profile, { backgroundColor: header.background, paddingTop: insets.top + 20 }]}>
-          <Avatar.Text size={52} label={initials(user?.name ?? '') || '?'} color={colors.onPrimaryContainer} style={{ backgroundColor: colors.primaryContainer }} labelStyle={{ fontFamily: fonts.semiBold }} />
+            header. This block continues that green, so the clock stays readable in light mode too.
+            The whole block opens the profile, which is where the picture is changed. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${user?.name ?? 'Your'} profile`}
+          onPress={() => choose(() => router.navigate('/profile'))}
+          style={({ pressed }) => [styles.profile, { backgroundColor: header.background, paddingTop: insets.top + 20 }, pressed && styles.pressed]}>
+          <UserAvatar name={user?.name ?? ''} url={user?.avatarUrl} size={52} />
           <View style={styles.identity}>
             <Text variant="titleMedium" numberOfLines={1} style={[styles.name, { color: header.foreground }]}>{user?.name}</Text>
             <Text variant="bodyMedium" numberOfLines={1} style={{ color: header.foreground, opacity: 0.8 }}>{user?.email}</Text>
           </View>
-        </View>
+          <Icon source="chevron-right" size={22} color={header.foreground} />
+        </Pressable>
 
         <Drawer.Section>
           <Drawer.Item label="Chats" icon="chat-outline" active={pathname.startsWith('/chats')} onPress={() => choose(() => router.navigate('/chats'))} />
@@ -121,6 +125,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingTop: 0, paddingStart: 0, paddingEnd: 0 },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingBottom: 20, marginBottom: 8 },
   identity: { flex: 1 },
+  pressed: { opacity: 0.85 },
   name: { fontFamily: fonts.semiBold },
   appearance: { marginHorizontal: 20, marginBottom: 16 },
   // Pushed to the bottom of the drawer when the menu is shorter than the screen.

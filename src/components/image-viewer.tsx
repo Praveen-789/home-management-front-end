@@ -6,18 +6,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Photo } from '@/api/images';
 import { formatBytes } from '@/lib/images';
 
-type Props = {
+// What the viewer needs: a task or expense photo, or a chat photo credited to its sender.
+export type ViewerPhoto = Pick<Photo, 'url' | 'width' | 'height' | 'bytes' | 'createdAt'> & { uploadedBy: { name: string } };
+
+type Props<P extends ViewerPhoto> = {
   // The photo to show, or null to keep the viewer closed.
-  photo: Photo | null;
+  photo: P | null;
   canRemove: boolean;
   busy: boolean;
   onClose: () => void;
-  onRemove: (photo: Photo) => void;
+  onRemove: (photo: P) => void;
 };
 
 // A full-screen look at one photo. Deleting asks for a second tap inside the viewer, because a
 // Paper dialog would open underneath this native modal.
-export default function ImageViewer({ photo, canRemove, busy, onClose, onRemove }: Props) {
+export default function ImageViewer<P extends ViewerPhoto>({ photo, canRemove, busy, onClose, onRemove }: Props<P>) {
   const [confirming, setConfirming] = useState(false);
   useEffect(() => { setConfirming(false); }, [photo]);
 

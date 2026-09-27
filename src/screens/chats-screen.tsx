@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Avatar, Badge, Button, Card, Chip, Dialog, Divider, HelperText, Icon, List, Portal, Searchbar, Text, TouchableRipple, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Badge, Button, Card, Chip, Dialog, Divider, HelperText, Icon, List, Portal, Searchbar, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import AppShell from '@/components/app-shell';
+import HouseholdAvatar from '@/components/household-avatar';
+import UserAvatar from '@/components/user-avatar';
 import HeaderAction from '@/components/header-action';
 import StatusMessage from '@/components/status-message';
 import { fonts } from '@/constants/fonts';
@@ -11,7 +13,7 @@ import { useHouseholdStore } from '@/stores/household-store';
 import { useChatStore } from '@/stores/chat-store';
 import { usePushState } from '@/lib/push-state';
 import { registerPush } from '@/lib/push-registration';
-import { conversationName, initial } from '@/lib/chat-helpers';
+import { conversationName, messageSummary } from '@/lib/chat-helpers';
 import { formatWhen, unreadLabel } from '@/lib/notification-helpers';
 import { errorMessage } from '@/lib/errors';
 import type { Conversation } from '@/api/chat';
@@ -94,13 +96,13 @@ export default function ChatsScreen() {
           const group = item.type === 'HOUSEHOLD';
           const preview = item.latestMessage
             ? (item.latestMessage.senderId === user?.id ? 'You: ' : group ? item.latestMessage.sender.name + ': ' : '') +
-              (item.latestMessage.deletedAt ? 'This message was deleted.' : item.latestMessage.text)
+              messageSummary(item.latestMessage)
             : group ? 'A shared space for everyone at home.' : 'Say hello to start the conversation.';
           return <TouchableRipple borderless style={[styles.row, { backgroundColor: colors.surface, borderColor: group ? colors.primary : colors.outlineVariant }]}
             accessibilityLabel={name + (item.unreadCount ? ', ' + item.unreadCount + ' unread messages' : '')}
             onPress={() => router.push({ pathname: '/chats/[conversationId]', params: { conversationId: item.id } })}>
             <View style={styles.rowContent}>
-              {group ? <Avatar.Icon size={50} icon="home-heart" /> : <Avatar.Text size={50} label={initial(name)} style={{ backgroundColor: colors.secondaryContainer }} color={colors.onSecondaryContainer} />}
+              {group ? <HouseholdAvatar url={household?.pictureUrl} size={50} preview name={household?.name} /> : <UserAvatar name={name} url={item.participants.find(p => p.id !== user?.id)?.avatarUrl} size={50} preview />}
               <View style={styles.preview}><View style={styles.nameRow}><Text variant="titleMedium" style={styles.name} numberOfLines={1}>{name}</Text>{item.muted && <Icon source="bell-off-outline" size={16} color={colors.onSurfaceVariant} />}</View>
                 <Text numberOfLines={2} variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>{preview}</Text>
                 <Text variant="labelSmall" style={{ color: colors.primary, marginTop: 5 }}>{group ? 'EVERYONE AT HOME' : 'PRIVATE CHAT'}</Text></View>
@@ -117,7 +119,7 @@ export default function ChatsScreen() {
       <Dialog.ScrollArea style={styles.memberList}><ScrollView keyboardShouldPersistTaps="handled">
         {memberLoading ? <ActivityIndicator style={{ padding: 24 }} /> : memberError ? <View><HelperText type="error">{memberError}</HelperText><Button onPress={() => void chooseMember()}>Try again</Button></View> :
           people.length ? people.map(m => <View key={m.user.id}><List.Item title={m.user.name} description="Private conversation" disabled={!!starting} onPress={() => void start(m.user.id)}
-            left={() => <Avatar.Text size={42} label={initial(m.user.name)} />}
+            left={() => <UserAvatar name={m.user.name} url={m.user.avatarUrl} size={42} />}
             right={() => starting === m.user.id ? <ActivityIndicator size="small" /> : <Icon source="chevron-right" size={24} />} /><Divider /></View>) :
           <Text style={{ padding: 24 }}>{search ? 'No members match your search.' : 'Invite another member to start a private chat.'}</Text>}
       </ScrollView></Dialog.ScrollArea>

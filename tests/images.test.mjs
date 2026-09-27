@@ -1,6 +1,21 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { formatBytes, imageFileName, MAX_IMAGES, MAX_UPLOAD_SIDE, remainingImageSlots, uploadSize } from '../src/lib/images.ts';
+import { chatPhotoSize, chatPhotoUrl, formatBytes, imageFileName, MAX_IMAGES, MAX_UPLOAD_SIDE, remainingImageSlots, uploadSize } from '../src/lib/images.ts';
+
+test('a chat photo asks Cloudinary for a copy sized to the bubble, and leaves other URLs alone', () => {
+  const url = 'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/homehub/households/home/chat/chat/abc';
+  assert.equal(chatPhotoUrl(url), 'https://res.cloudinary.com/demo/image/upload/c_limit,w_720,h_720,f_auto,q_auto/homehub/households/home/chat/chat/abc');
+  assert.equal(chatPhotoUrl('file:///cache/photo.jpg'), 'file:///cache/photo.jpg');
+});
+
+test('a chat photo keeps its shape in the bubble between a letterbox and a tall portrait', () => {
+  assert.deepEqual(chatPhotoSize(1200, 900, 240), { width: 240, height: 180 });
+  assert.deepEqual(chatPhotoSize(900, 1200, 240), { width: 240, height: 320 });
+  assert.deepEqual(chatPhotoSize(4000, 500, 240), { width: 240, height: 144 }); // a panorama is cropped to 0.6
+  assert.deepEqual(chatPhotoSize(500, 4000, 240), { width: 240, height: 320 }); // a tall screenshot to 4:3
+  assert.deepEqual(chatPhotoSize(undefined, undefined, 240), { width: 240, height: 240 });
+  assert.deepEqual(chatPhotoSize(0, 900, 240), { width: 240, height: 240 });
+});
 
 test('counts the slots left under the backend limit, never below zero', () => {
   assert.equal(MAX_IMAGES, 5);

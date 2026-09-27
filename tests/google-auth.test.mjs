@@ -71,6 +71,8 @@ test('Google login persists only HomeHub session and rejects invalid responses/s
     'react-native': { Platform: { OS: 'android' } },
     zustand: { create: factory => factory(update => Object.assign(state, update)) },
     '@/api/auth': { googleSignIn: async () => result, isSession: value => !!value?.token && !!value?.user, SESSION_STORAGE_KEY: 'homehub-session' },
+    // The store also changes the profile picture; signing in never touches either module.
+    '@/api/images': {}, '@/api/profile': {},
   });
   await store.loginWithGoogle('google-token');
   assert.deepEqual(saved[0], { token: result.token, user: result.user });

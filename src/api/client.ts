@@ -25,7 +25,7 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof Error && error.name === 'ApiError' && typeof (error as ApiError).status === 'number';
 }
 
-type RequestOptions = { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: object; token?: string };
+type RequestOptions = { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: object; token?: string };
 
 // Sends JSON to the API and returns the parsed body. Throws ApiError for HTTP failures and a
 // plain Error with a safe message for timeouts and network problems.

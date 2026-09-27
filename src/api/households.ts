@@ -3,7 +3,8 @@ import { apiRequest } from '@/api/client';
 import { isHouseholdRole, type AssignableRole, type HouseholdRole } from '@/lib/household-permissions';
 
 // A household as the list endpoint returns it: `role` is the caller's own role in it.
-export type Household = { id: string; name: string; createdAt: string; role: HouseholdRole };
+// pictureUrl is a ready-to-show Cloudinary URL, or null while the household has no picture.
+export type Household = { id: string; name: string; createdAt: string; role: HouseholdRole; pictureUrl?: string | null };
 export type Member = { id: string; role: HouseholdRole; user: User };
 
 const unexpectedResponse = () => new Error('Unexpected response from HomeHub. Please try again.');
@@ -37,6 +38,25 @@ export async function createHousehold(token: string, name: string): Promise<Hous
   if (!isRecord(household) || typeof household.id !== 'string' || !household.id ||
     typeof household.name !== 'string' || typeof household.createdAt !== 'string') throw unexpectedResponse();
   return { id: household.id, name: household.name, createdAt: household.createdAt, role: 'OWNER' };
+}
+
+const picturePath = (householdId: string) => `/households/${encodeURIComponent(householdId)}/picture`;
+// Where an owner or admin asks for permission to upload a new household picture.
+export const pictureUploadsPath = (householdId: string) => `${picturePath(householdId)}/uploads`;
+
+function readHousehold(data: unknown): Household {
+  const household = isRecord(data) ? data.household : undefined;
+  if (!isHousehold(household)) throw unexpectedResponse();
+  return household;
+}
+
+// Both answer with the household as the list shows it, so the store can swap its copy.
+export async function setHouseholdPicture(token: string, householdId: string, publicId: string): Promise<Household> {
+  return readHousehold(await apiRequest(picturePath(householdId), { method: 'PUT', body: { publicId }, token }));
+}
+
+export async function removeHouseholdPicture(token: string, householdId: string): Promise<Household> {
+  return readHousehold(await apiRequest(picturePath(householdId), { method: 'DELETE', token }));
 }
 
 export async function listMembers(token: string, householdId: string): Promise<Member[]> {

@@ -10,6 +10,7 @@ import AppDialog from '@/components/ui/app-dialog';
 import type { Household } from '@/api/households';
 import type { Invitation } from '@/api/invitations';
 import AppShell from '@/components/app-shell';
+import HouseholdAvatar from '@/components/household-avatar';
 import InvitationCard from '@/components/invitation-card';
 import NotificationBell from '@/components/notification-bell';
 import StatusMessage from '@/components/status-message';
@@ -166,7 +167,7 @@ function HouseholdCard({ household, disabled, onPress }: { household: Household;
       onPress={onPress} disabled={disabled}>
       <View style={styles.cardContent}>
         <View style={styles.heroTop}>
-          <View style={[styles.homeIcon, { backgroundColor: colors.primaryContainer }]}><Icon source="home-outline" size={28} color={colors.onPrimaryContainer} /></View>
+          <HouseholdAvatar url={household.pictureUrl} size={52} style={styles.homeIcon} preview name={household.name} />
           <View style={[styles.role, { backgroundColor: colors.surfaceVariant }]}><Text variant="labelMedium" style={{ color: colors.onSurfaceVariant }}>{label}</Text></View>
         </View>
         <Text variant="titleLarge" style={styles.heading}>{household.name}</Text>
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
   count: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
   card: { borderRadius: 24, borderWidth: 1 },
   cardContent: { padding: 20, gap: 8 },
-  homeIcon: { width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  homeIcon: { marginBottom: 8 },
   role: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, marginTop: 10, paddingTop: 16 },
   invitations: { gap: 12, marginBottom: 12 },

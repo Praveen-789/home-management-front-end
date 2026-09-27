@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { io } from 'socket.io-client';
 import { API_URL } from '@/api/client';
-import { isChatClear, isMessage, isMessageDeletion, isRecord } from '@/api/chat';
+import { isChatClear, isMessage, isMessageDeletion, isReceiptEvent, isRecord } from '@/api/chat';
 import { useAuthStore } from '@/stores/auth-store';
 import { useChatStore } from '@/stores/chat-store';
 import { useNotificationStore } from '@/stores/notification-store';
@@ -61,6 +61,10 @@ export default function useChatSync() {
       payload.messageIds.forEach(dismissChatAlert);
       void useNotificationStore.getState().refreshUnreadCount().catch(() => {});
     });
+    // Someone changed a message's text. It keeps its place, so unread counts and alerts stay as they are.
+    socket.on('chat:message-edited', (payload: unknown) => {
+      if (valid() && isRecord(payload) && isMessage(payload.message)) useChatStore.getState().receiveEdit(payload.message);
+    });
     // This user cleared the chat on another of their devices.
     socket.on('chat:cleared', (payload: unknown) => {
       if (!valid() || !isChatClear(payload)) return;
@@ -71,6 +75,10 @@ export default function useChatSync() {
       if (!valid() || !isRecord(payload) || typeof payload.conversationId !== 'string' ||
         !Number.isSafeInteger(payload.lastReadSequence) || !Number.isSafeInteger(payload.unreadCount)) return;
       useChatStore.getState().receiveRead(payload.conversationId, payload.lastReadSequence as number, payload.unreadCount as number);
+    });
+    // Someone else received or read messages, which changes the ticks on this user's own messages.
+    socket.on('chat:receipt', (payload: unknown) => {
+      if (valid() && isReceiptEvent(payload)) useChatStore.getState().receiveReceipt(payload);
     });
     socket.on('chat:preferences', (payload: unknown) => {
       if (!valid() || !isRecord(payload) || typeof payload.conversationId !== 'string' || typeof payload.muted !== 'boolean') return;

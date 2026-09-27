@@ -8,7 +8,7 @@ export type Invitation = {
   id: string;
   role: AssignableRole;
   createdAt: string;
-  household: { id: string; name: string };
+  household: { id: string; name: string; pictureUrl?: string | null };
   invitedUser: User;
   invitedBy: User;
 };

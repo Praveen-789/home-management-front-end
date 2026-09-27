@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Avatar, Chip, IconButton, List, Menu } from 'react-native-paper';
+import { Chip, IconButton, List, Menu } from 'react-native-paper';
 import type { Member } from '@/api/households';
+import UserAvatar from '@/components/user-avatar';
 import { ASSIGNABLE_ROLES, canChangeRole, canRemoveMember, ROLE_LABELS, type AssignableRole, type HouseholdRole } from '@/lib/household-permissions';
 
 type Props = {
@@ -13,9 +14,6 @@ type Props = {
   onChangeRole: (role: AssignableRole) => void;
   onRemove: () => void;
 };
-
-const initials = (name: string) =>
-  name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?';
 
 export default function MemberRow({ member, actorRole, isSelf, disabled, onChangeRole, onRemove }: Props) {
   const [open, setOpen] = useState(false);
@@ -29,7 +27,7 @@ export default function MemberRow({ member, actorRole, isSelf, disabled, onChang
     <List.Item
       title={isSelf ? `${name} (you)` : name}
       description={member.user.email}
-      left={({ style }) => <Avatar.Text size={40} label={initials(name)} style={style} />}
+      left={({ style }) => <UserAvatar name={name} url={member.user.avatarUrl} size={40} style={style} preview />}
       right={() => (
         <View style={styles.right}>
           <Chip compact>{ROLE_LABELS[member.role]}</Chip>

@@ -8,12 +8,15 @@ import HeaderAction from '@/components/header-action';
 import AppDialog from '@/components/ui/app-dialog';
 import type { Member } from '@/api/households';
 import AppShell from '@/components/app-shell';
+import HouseholdAvatar from '@/components/household-avatar';
+import PictureEditor from '@/components/picture-editor';
 import MemberRow from '@/components/member-row';
 import NotificationBell from '@/components/notification-bell';
 import PendingInvitationRow from '@/components/pending-invitation-row';
 import StatusMessage from '@/components/status-message';
 import { errorMessage } from '@/lib/errors';
-import { canManageMember, canManageMembers, ROLE_LABELS, type AssignableRole } from '@/lib/household-permissions';
+import usePictureActions from '@/hooks/use-picture-actions';
+import { canChangePicture, canManageMember, canManageMembers, ROLE_LABELS, type AssignableRole } from '@/lib/household-permissions';
 import { useAuthStore } from '@/stores/auth-store';
 import { useHouseholdStore } from '@/stores/household-store';
 import { useInvitationStore } from '@/stores/invitation-store';
@@ -40,6 +43,15 @@ export default function HouseholdDetailScreen() {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [removal, setRemoval] = useState<Member | null>(null);
+  const [confirmingPictureRemoval, setConfirmingPictureRemoval] = useState(false);
+  // Owners and admins change the household's picture from the hero card. Outcomes share the snackbar.
+  const picture = usePictureActions({
+    change: (file) => useHouseholdStore.getState().changePicture(householdId, file),
+    remove: () => useHouseholdStore.getState().removePicture(householdId),
+    report: setNotice,
+    changed: 'The household picture was updated.',
+    removed: 'The household picture was removed.',
+  });
 
   const household = households?.find((item) => item.id === householdId);
   const role = household?.role;
@@ -123,7 +135,17 @@ export default function HouseholdDetailScreen() {
             <View style={styles.header}>
               <Animated.View entering={heroEnter} style={[styles.hero, { backgroundColor: theme.colors.primaryContainer }]}>
                 <View style={styles.heroTop}>
-                  <Icon source="home-heart" size={36} color={theme.colors.onPrimaryContainer} />
+                  {role && canChangePicture(role) ? (
+                    <PictureEditor
+                      label={household?.pictureUrl ? 'Change the household picture' : 'Add a household picture'}
+                      pictureUrl={household?.pictureUrl}
+                      name={household?.name ?? 'Household'}
+                      busy={picture.busy}
+                      onPick={picture.pick}
+                      onRemove={() => setConfirmingPictureRemoval(true)}>
+                      <HouseholdAvatar url={household?.pictureUrl} size={72} background={theme.colors.background} foreground={theme.colors.primary} />
+                    </PictureEditor>
+                  ) : <HouseholdAvatar url={household?.pictureUrl} size={72} background={theme.colors.background} foreground={theme.colors.primary} preview name={household?.name} />}
                   {role && <View style={[styles.role, { backgroundColor: theme.colors.background }]}><Text variant="labelMedium" style={{ color: theme.colors.primary }}>Your role: {ROLE_LABELS[role]}</Text></View>}
                 </View>
                 <Text variant="headlineMedium" style={[styles.heading, { color: theme.colors.onPrimaryContainer }]}>{household?.name ?? 'Your household'}</Text>
@@ -215,6 +237,16 @@ export default function HouseholdDetailScreen() {
         onConfirm={confirmRemoval}
       >
         {`They will lose access to ${household?.name ?? 'this household'}. Their account is not affected.`}
+      </AppDialog>
+      <AppDialog
+        visible={confirmingPictureRemoval}
+        onDismiss={() => setConfirmingPictureRemoval(false)}
+        icon="home-heart"
+        title="Remove the household picture?"
+        confirmLabel="Remove"
+        onConfirm={() => { setConfirmingPictureRemoval(false); picture.remove(); }}
+      >
+        Everyone at home will see the home icon instead.
       </AppDialog>
       <Snackbar visible={!!notice} onDismiss={() => setNotice('')} duration={4000}>{notice}</Snackbar>
     </AppShell>

@@ -22,6 +22,11 @@ export function canManageMembers(actor: HouseholdRole): boolean {
   return actor !== 'MEMBER';
 }
 
+// The picture represents the whole household, so it follows the same rule. The backend enforces it.
+export function canChangePicture(actor: HouseholdRole): boolean {
+  return actor !== 'MEMBER';
+}
+
 // Roles the actor may hand out when inviting a member or changing one. Cancelling a pending
 // invitation follows the same rule against the invitation's role.
 export function canAssignRole(actor: HouseholdRole, role: AssignableRole): boolean {

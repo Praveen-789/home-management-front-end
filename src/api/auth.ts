@@ -2,7 +2,9 @@ import { apiRequest, GENERIC_ERROR, isApiError } from '@/api/client';
 
 export { API_URL } from '@/api/client';
 
-export type User = { id: string; name: string; email: string };
+// avatarUrl is a ready-to-show Cloudinary URL. It is null until the person sets a picture, and
+// missing in sessions saved by an older version of the app.
+export type User = { id: string; name: string; email: string; avatarUrl?: string | null };
 export type Session = { token: string; user: User };
 // Where a phone keeps its session. It is shared because a notification button can wake the app with
 // no screen and no store loaded, and the reply still has to be sent as the signed-in user.

@@ -1,7 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
+import { AppState } from 'react-native';
 import { isSession, SESSION_STORAGE_KEY } from '@/api/auth';
-import { isRecord } from '@/api/chat';
+import { isRecord, markDelivered } from '@/api/chat';
 import { tokenExpiresAt } from '@/api/token';
 import { chatNotificationTarget } from '@/lib/chat-helpers';
 import { CHAT_CATEGORY, registerChatCategory } from '@/lib/chat-notification-actions';
@@ -32,6 +33,11 @@ export function presentChatDelivery(payload: unknown) {
     if (!isSession(session) || session.user.id !== data.recipientId || tokenExpiresAt(session.token) <= Date.now()) return;
     const id = data.conversationId as string;
     if (await readSequence(session.user.id, id) >= (data.sequence as number)) return;
+    // The push woke this phone, so the message has arrived: its sender's single tick can become
+    // two even though the app is closed. While the app is open the chat store reports instead.
+    // The report never delays or blocks the notification, and a failure is made up by the next sync.
+    const report = AppState.currentState === 'active' ? Promise.resolve()
+      : markDelivered(session.token, id, data.sequence as number).catch(() => {});
     await registerChatCategory();
     const { delivery: _delivery, previewTitle, previewBody, ...chat } = data;
     await Notifications.scheduleNotificationAsync({
@@ -39,5 +45,7 @@ export function presentChatDelivery(payload: unknown) {
       content: { title: previewTitle as string, body: previewBody as string, categoryIdentifier: CHAT_CATEGORY, data: chat },
       trigger: { channelId: 'chat' },
     });
+    // Awaited last, so Android does not shut the task down with the request still in flight.
+    await report;
   });
 }

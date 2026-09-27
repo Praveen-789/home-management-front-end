@@ -24,8 +24,9 @@ export type UploadTicket = { uploadUrl: string; fields: Record<string, string>; 
 // What the backend records once Cloudinary has accepted the file.
 export type ImageInput = { publicId: string; width: number; height: number; bytes: number; format: string };
 
-// A local file ready to upload, as the picker produces it.
-export type ImageFile = { uri: string; name: string; type: string };
+// A local file ready to upload, as the picker produces it. The size lets a chat show the photo in
+// its true shape before the upload finishes.
+export type ImageFile = { uri: string; name: string; type: string; width?: number; height?: number };
 
 const unexpectedResponse = () => new Error('Unexpected response from HomeHub. Please try again.');
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
@@ -44,8 +45,10 @@ function isUploadTicket(value: unknown): value is UploadTicket {
     Array.isArray(value.allowedFormats) && typeof value.expiresAt === 'string';
 }
 
-export async function requestUpload(token: string, householdId: string): Promise<UploadTicket> {
-  const data = await apiRequest(`/households/${encodeURIComponent(householdId)}/uploads`, { method: 'POST', token });
+// `path` is the backend route that signs the upload. It decides whose folder the file lands in:
+// a household's photos, the signed-in user's avatar, or a household's picture.
+export async function requestUpload(token: string, path: string): Promise<UploadTicket> {
+  const data = await apiRequest(path, { method: 'POST', token });
   const upload = isRecord(data) ? data.upload : undefined;
   if (!isUploadTicket(upload)) throw unexpectedResponse();
   return upload;
@@ -94,7 +97,11 @@ export async function uploadToCloudinary(ticket: UploadTicket, file: ImageFile):
 }
 
 // The whole client side of an upload: permission from HomeHub, then the file to Cloudinary.
-export async function uploadImage(token: string, householdId: string, file: ImageFile): Promise<ImageInput> {
-  const ticket = await requestUpload(token, householdId);
-  return uploadToCloudinary(ticket, file);
+export async function uploadWithTicket(token: string, ticketPath: string, file: ImageFile): Promise<ImageInput> {
+  return uploadToCloudinary(await requestUpload(token, ticketPath), file);
+}
+
+// A photo for a task or an expense of this household.
+export function uploadImage(token: string, householdId: string, file: ImageFile): Promise<ImageInput> {
+  return uploadWithTicket(token, `/households/${encodeURIComponent(householdId)}/uploads`, file);
 }
