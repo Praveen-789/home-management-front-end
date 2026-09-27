@@ -3,5 +3,12 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
-  }
+  },
+  
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#6A1B9A",
+        "titleBar.inactiveBackground": "#4A148C",
+        "statusBar.background": "#6A1B9A"
+    }
+
 }

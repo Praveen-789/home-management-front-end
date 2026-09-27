@@ -1,32 +1,17 @@
 import ChatRuntime from '@/components/chat-runtime';
-import SideMenu from '@/components/side-menu';
 import useUnreadCountSync from '@/hooks/use-unread-count-sync';
-import { usePathname } from 'expo-router';
-import { Drawer } from 'expo-router/drawer';
-import { useTheme } from 'react-native-paper';
+import { Slot } from 'expo-router';
 
 // Signed-in screens. The root layout guards this whole group behind the session.
-// A drawer holds sibling screens, but HomeHub's screens are a stack (household, then tasks, then a
-// task). So the drawer has a single screen, the stack, and exists only to slide the side menu over it.
+// HomeHub's screens are one stack, defined in the (stack) group; the five top-level screens show
+// the bottom tab bar (AppShell's `tabs`), and deeper screens a back arrow. Slot renders the stack
+// while this layout mounts what must live once per session: the badge sync and the chat socket.
 export default function AppLayout() {
   useUnreadCountSync();
-  const { colors } = useTheme();
-  const atHome = usePathname() === '/';
-
   return (
     <>
       <ChatRuntime />
-      <Drawer
-        drawerContent={(props) => <SideMenu {...props} />}
-        screenOptions={{
-          // AppShell draws each screen's header, including the menu button.
-          headerShown: false,
-          drawerType: 'front',
-          drawerStyle: { backgroundColor: colors.elevation.level1, width: 304 },
-          // Deeper screens keep the left edge for the back swipe.
-          swipeEnabled: atHome,
-        }}
-      />
+      <Slot />
     </>
   );
 }

@@ -1,20 +1,21 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { router, useNavigation } from 'expo-router';
-import { DrawerActions } from 'expo-router/react-navigation';
+import { router } from 'expo-router';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import BottomTabBar from '@/components/bottom-tab-bar';
 import { useHeaderColors } from '@/hooks/use-header-colors';
 import { fonts } from '@/constants/fonts';
 
 type Props = PropsWithChildren<{
   title: string;
-  // Shows the side menu button. For top-level screens; deeper ones use `back` instead.
-  menu?: boolean;
+  compact?: boolean;
+  // Shows the bottom tab bar. For the five top-level screens; deeper ones use `back` instead.
+  tabs?: boolean;
   // Shows a back button. With no history (a deep link) it returns to the household list instead.
   back?: boolean;
-  // Replaces the menu or back button with a close button, for a temporary mode such as selecting
+  // Replaces the back button with a close button, for a temporary mode such as selecting
   // rows. Closing leaves the mode, not the screen.
   onClose?: () => void;
   actions?: ReactNode;
@@ -29,18 +30,15 @@ export function goBack() {
 
 // Layout for signed-in screens: a header bar plus a full-height body. The header handles the
 // status bar inset itself, so the safe area only covers the other edges.
-export default function AppShell({ title, menu, back, onClose, actions, scroll, children }: Props) {
+export default function AppShell({ title, compact, tabs, back, onClose, actions, scroll, children }: Props) {
   const { colors } = useTheme();
   const header = useHeaderColors();
-  const navigation = useNavigation();
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['bottom', 'left', 'right']}>
       {/* The header is dark in both themes, so the clock and battery icons must be light. */}
       <StatusBar style="light" />
-      <Appbar.Header style={{ backgroundColor: header.background }}>
-        {/* This screen lives in the stack, which has no drawer. The action travels up to the drawer around it. */}
+      <Appbar.Header mode={compact ? "small" : undefined} style={[{ backgroundColor: header.background }, compact && { height: 48 }]}>
         {onClose && <Appbar.Action icon="close" color={header.foreground} accessibilityLabel="Cancel selection" onPress={onClose} />}
-        {!onClose && menu && <Appbar.Action icon="menu" color={header.foreground} accessibilityLabel="Open menu" onPress={() => navigation.dispatch(DrawerActions.openDrawer())} />}
         {!onClose && back && <Appbar.BackAction onPress={goBack} color={header.foreground} accessibilityLabel="Go back" />}
         <Appbar.Content title={title} titleStyle={[styles.title, { color: header.foreground }]} />
         {actions}
@@ -54,6 +52,7 @@ export default function AppShell({ title, menu, back, onClose, actions, scroll, 
       ) : (
         <View style={styles.flex}>{children}</View>
       )}
+      {tabs && <BottomTabBar />}
     </SafeAreaView>
   );
 }

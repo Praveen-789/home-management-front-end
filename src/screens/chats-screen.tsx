@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Badge, Button, Card, Chip, Dialog, Divider, HelperText, Icon, List, Portal, Searchbar, Text, TouchableRipple, useTheme } from 'react-native-paper';
+import { FlatList, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Badge, Button, Card, Chip, Dialog, HelperText, Icon, IconButton, Portal, Searchbar, Text, TouchableRipple, useTheme } from 'react-native-paper';
 import AppShell from '@/components/app-shell';
 import HouseholdAvatar from '@/components/household-avatar';
 import UserAvatar from '@/components/user-avatar';
@@ -53,11 +53,17 @@ export default function ChatsScreen() {
     catch (e) { setMemberError(errorMessage(e, 'Could not load household members.')); }
     finally { setMemberLoading(false); }
   }
+  function dismissPicker() {
+    if (startLock.current) return;
+    Keyboard.dismiss();
+    setPicker(false);
+  }
   async function start(recipientId: string) {
     if (startLock.current) return;
     startLock.current = true; setStarting(recipientId); setMemberError('');
     try {
       const id = await useChatStore.getState().direct(householdId, recipientId);
+      Keyboard.dismiss();
       setPicker(false);
       router.push({ pathname: '/chats/[conversationId]', params: { conversationId: id } });
     } catch (e) { setMemberError(errorMessage(e, 'Could not open this private chat.')); }
@@ -67,7 +73,7 @@ export default function ChatsScreen() {
     Number(b.type === 'HOUSEHOLD') - Number(a.type === 'HOUSEHOLD') ||
     (b.latestMessage?.createdAt ?? b.createdAt).localeCompare(a.latestMessage?.createdAt ?? a.createdAt));
   const people = (members ?? []).filter(m => m.user.id !== user?.id && m.user.name.toLowerCase().includes(search.trim().toLowerCase()));
-  return <AppShell title="Chats" back actions={<HeaderAction icon="square-edit-outline" accessibilityLabel="Start a private chat" disabled={!household} onPress={() => void chooseMember()} />}>
+  return <AppShell title="Chats" tabs actions={<HeaderAction icon="square-edit-outline" accessibilityLabel="Start a private chat" disabled={!household} onPress={() => void chooseMember()} />}>
     <View style={styles.container}>
       {!!households?.length && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.households} style={styles.selector}>
         {households.map(h => <Chip key={h.id} selected={h.id === householdId} showSelectedOverlay onPress={() => { setSelection(h.id); setError(''); }} accessibilityState={{ selected: h.id === householdId }}>{h.name}</Chip>)}
@@ -112,19 +118,40 @@ export default function ChatsScreen() {
           </TouchableRipple>;
         }} />}
     </View>
-    <Portal><Dialog visible={picker} onDismiss={() => { if (!starting) setPicker(false); }} style={styles.dialog}>
-      <Dialog.Title>Start a private chat</Dialog.Title>
-      <Dialog.Content><Text variant="bodyMedium">Choose someone from {household?.name ?? 'your household'}.</Text></Dialog.Content>
-      <Searchbar placeholder="Find a member" accessibilityLabel="Find a household member" value={search} onChangeText={setSearch} style={styles.search} />
-      <Dialog.ScrollArea style={styles.memberList}><ScrollView keyboardShouldPersistTaps="handled">
-        {memberLoading ? <ActivityIndicator style={{ padding: 24 }} /> : memberError ? <View><HelperText type="error">{memberError}</HelperText><Button onPress={() => void chooseMember()}>Try again</Button></View> :
-          people.length ? people.map(m => <View key={m.user.id}><List.Item title={m.user.name} description="Private conversation" disabled={!!starting} onPress={() => void start(m.user.id)}
-            left={() => <UserAvatar name={m.user.name} url={m.user.avatarUrl} size={42} />}
-            right={() => starting === m.user.id ? <ActivityIndicator size="small" /> : <Icon source="chevron-right" size={24} />} /><Divider /></View>) :
-          <Text style={{ padding: 24 }}>{search ? 'No members match your search.' : 'Invite another member to start a private chat.'}</Text>}
+    <Portal><KeyboardAvoidingView pointerEvents="box-none" style={styles.pickerKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} enabled={picker && Platform.OS !== 'web'}>
+      <View pointerEvents="box-none" style={styles.pickerBounds}>
+      <Dialog visible={picker} onDismiss={dismissPicker} style={[styles.dialog, { backgroundColor: colors.surface }]}>
+      <View style={styles.dialogHeader}>
+        <View style={[styles.dialogIcon, { backgroundColor: colors.primaryContainer }]}>
+          <Icon source="chat-plus-outline" size={28} color={colors.onPrimaryContainer} />
+        </View>
+        <IconButton icon="close" accessibilityLabel="Close private chat dialog" disabled={!!starting} onPress={dismissPicker} style={styles.closeButton} />
+      </View>
+      <View style={styles.dialogIntro}>
+        <Text variant="headlineSmall" accessibilityRole="header" style={styles.bold}>Start a private chat</Text>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>A little catch-up, just between you two.</Text>
+        <View style={styles.householdLabel}>
+          <Icon source="home-outline" size={16} color={colors.primary} />
+          <Text variant="labelMedium" numberOfLines={1} style={[styles.householdName, { color: colors.primary }]}>{household?.name ?? 'Your household'}</Text>
+        </View>
+      </View>
+      <Searchbar placeholder="Find a member" accessibilityLabel="Find a household member" value={search} onChangeText={setSearch} style={[styles.search, { backgroundColor: colors.surfaceVariant }]} inputStyle={styles.searchInput} />
+      <Dialog.ScrollArea style={[styles.memberList, { borderColor: colors.outlineVariant }]}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.memberListContent}>
+        {memberLoading ? <View style={styles.memberState}><ActivityIndicator accessibilityLabel="Loading household members" /><Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>Finding your household members…</Text></View> : memberError ?
+          <View style={styles.memberState}><Icon source="alert-circle-outline" size={30} color={colors.error} /><Text variant="bodyMedium" accessibilityRole="alert" style={[styles.stateText, { color: colors.error }]}>{memberError}</Text><Button mode="outlined" onPress={() => void chooseMember()}>Try again</Button></View> :
+          people.length ? people.map(m => <TouchableRipple key={m.user.id} borderless disabled={!!starting} onPress={() => void start(m.user.id)}
+            accessibilityRole="button" accessibilityLabel={`Start a private chat with ${m.user.name}`} accessibilityState={{ disabled: !!starting, busy: starting === m.user.id }}
+            style={[styles.memberRow, { backgroundColor: starting === m.user.id ? colors.primaryContainer : colors.elevation.level1, opacity: starting && starting !== m.user.id ? 0.5 : 1 }]}>
+            <View style={styles.memberRowContent}>
+              <UserAvatar name={m.user.name} url={m.user.avatarUrl} size={44} />
+              <View style={styles.memberDetails}><Text variant="titleSmall" numberOfLines={1} style={styles.bold}>{m.user.name}</Text><Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>{starting === m.user.id ? 'Opening your chat…' : 'Tap to say hello'}</Text></View>
+              {starting === m.user.id ? <ActivityIndicator size="small" /> : <Icon source="chevron-right" size={22} color={colors.primary} />}
+            </View>
+          </TouchableRipple>) :
+          <View style={styles.memberState}><Icon source={search.trim() ? 'account-search-outline' : 'account-group-outline'} size={36} color={colors.onSurfaceVariant} /><Text variant="titleSmall" style={styles.bold}>{search.trim() ? 'No members found' : 'A little quiet here'}</Text><Text variant="bodyMedium" style={[styles.stateText, { color: colors.onSurfaceVariant }]}>{search.trim() ? 'Try another name to find your person.' : 'Invite another member to start a private chat.'}</Text></View>}
       </ScrollView></Dialog.ScrollArea>
-      <Dialog.Actions><Button disabled={!!starting} onPress={() => setPicker(false)}>Cancel</Button></Dialog.Actions>
-    </Dialog></Portal>
+      <Dialog.Actions style={styles.dialogActions}><Button mode="text" disabled={!!starting} onPress={dismissPicker}>Cancel</Button></Dialog.Actions>
+    </Dialog></View></KeyboardAvoidingView></Portal>
   </AppShell>;
 }
 const styles = StyleSheet.create({
@@ -137,6 +164,15 @@ const styles = StyleSheet.create({
   rowContent: { flexDirection: 'row', padding: 16, gap: 12, alignItems: 'center' },
   preview: { flex: 1, gap: 4 }, nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { fontFamily: fonts.semiBold, flexShrink: 1 }, meta: { alignItems: 'flex-end', gap: 10, maxWidth: 76 },
-  newChat: { marginTop: 24 }, dialog: { maxWidth: 520, width: '90%', alignSelf: 'center' },
-  search: { marginHorizontal: 20, marginBottom: 16 }, memberList: { maxHeight: 340, paddingHorizontal: 20 },
+  newChat: { marginTop: 24 }, dialog: { maxWidth: 520, width: '90%', alignSelf: 'center', marginHorizontal: 0, borderRadius: 28, maxHeight: '90%' },
+  pickerKeyboard: { ...StyleSheet.absoluteFill }, pickerBounds: { flex: 1 },
+  dialogHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24 },
+  dialogIcon: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  closeButton: { margin: 0 }, dialogIntro: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 20, gap: 8 },
+  householdLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }, householdName: { flexShrink: 1 },
+  search: { marginHorizontal: 24, marginBottom: 20, borderRadius: 16 }, searchInput: { fontSize: 14 },
+  memberList: { maxHeight: 340, paddingHorizontal: 24, flexShrink: 1 }, memberListContent: { paddingVertical: 16, gap: 10 },
+  memberRow: { borderRadius: 18, overflow: 'hidden' }, memberRowContent: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  memberDetails: { flex: 1, gap: 4 }, memberState: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 8, gap: 12 },
+  stateText: { textAlign: 'center' }, dialogActions: { paddingHorizontal: 24, paddingVertical: 12 },
 });

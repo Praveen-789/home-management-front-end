@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { AppState, BackHandler, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, useWindowDimensions, View, type ViewToken } from 'react-native';
+import { AppState, BackHandler, FlatList, Pressable, StyleSheet, TextInput, useWindowDimensions, View, type ViewToken } from 'react-native';
 import { ActivityIndicator, Button, HelperText, Icon, IconButton, Menu, Snackbar, Text, useTheme } from 'react-native-paper';
 import AppShell from '@/components/app-shell';
 import AppDialog from '@/components/ui/app-dialog';
 import ChatPhoto from '@/components/chat-photo';
 import HeaderAction from '@/components/header-action';
 import ImageViewer, { type ViewerPhoto } from '@/components/image-viewer';
+import KeyboardAvoidingBody from '@/components/keyboard-avoiding-body';
 import MessageInfoDialog from '@/components/message-info-dialog';
 import StatusMessage from '@/components/status-message';
 import UserAvatar from '@/components/user-avatar';
@@ -61,7 +62,6 @@ export default function ChatScreen() {
   const [muting, setMuting] = useState(false);
   const [notice, setNotice] = useState('');
   const [awayFromBottom, setAwayFromBottom] = useState(false);
-  const [bodyTop, setBodyTop] = useState(0);
   // Long-pressing a message starts a selection; after that a tap adds or removes one.
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -80,7 +80,6 @@ export default function ChatScreen() {
   // A photo fills its bubble: the list's side padding, the bubble's share of the row, its own
   // padding and, in the household chat, the picture column all come off the screen width.
   const photoWidth = Math.floor(Math.min(260, (Math.min(windowWidth, 760) - 32 - (conversation?.type === 'HOUSEHOLD' ? 40 : 0)) * 0.86 - 10));
-  const body = useRef<View>(null);
   const list = useRef<FlatList<Row>>(null);
   const readable = useRef(0);
   const focused = useRef(false);
@@ -247,11 +246,8 @@ export default function ChatScreen() {
       </> : undefined}>
     {!thread || !conversation ? error ? <StatusMessage text={error} action="Try again" onAction={() => void useChatStore.getState().sync(conversationId).catch(() => {})} /> :
       <ActivityIndicator style={styles.center} accessibilityLabel="Loading conversation" /> :
-      // Edge-to-edge Android no longer resizes the window for the keyboard, so padding does it on both platforms.
-      // The keyboard's position is given from the top of the screen, so the offset is where this body starts.
-      <KeyboardAvoidingView style={styles.flex} behavior="padding" keyboardVerticalOffset={bodyTop}>
-        <View ref={body} collapsable={false} onLayout={() => body.current?.measureInWindow((_x, y) => setBodyTop(y))}
-          style={[styles.context, { borderColor: colors.outlineVariant }]}>
+      <KeyboardAvoidingBody>
+        <View style={[styles.context, { borderColor: colors.outlineVariant }]}>
           <Icon source={conversation.type === 'HOUSEHOLD' ? 'account-group-outline' : 'lock-outline'} size={17} color={colors.primary} />
           <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
             {household?.name ? household.name + ' · ' : ''}{conversation.type === 'HOUSEHOLD' ? 'Everyone at home' : 'One-to-one chat'}{conversation.muted ? ' · Muted' : ''}
@@ -375,7 +371,7 @@ export default function ChatScreen() {
           </View>
           {(editing ? editText : draft).length > 3600 && <Text variant="labelSmall" style={[styles.counter, { color: colors.onSurfaceVariant }]}>{(editing ? editText : draft).length}/4000</Text>}
         </View>}
-      </KeyboardAvoidingView>}
+      </KeyboardAvoidingBody>}
     <MessageInfoDialog conversationId={conversationId} message={infoMessage} receipts={conversation?.receipts} onDismiss={() => setInfoMessage(null)} />
     {/* Chat photos go with their message: deleting the message is the way to remove one. */}
     <ImageViewer photo={viewing} canRemove={false} busy={false} onClose={() => setViewing(null)} onRemove={() => {}} />

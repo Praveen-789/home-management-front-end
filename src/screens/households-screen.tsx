@@ -12,7 +12,6 @@ import type { Invitation } from '@/api/invitations';
 import AppShell from '@/components/app-shell';
 import HouseholdAvatar from '@/components/household-avatar';
 import InvitationCard from '@/components/invitation-card';
-import NotificationBell from '@/components/notification-bell';
 import StatusMessage from '@/components/status-message';
 import { errorMessage } from '@/lib/errors';
 import { ROLE_LABELS } from '@/lib/household-permissions';
@@ -87,7 +86,7 @@ export default function HouseholdsScreen() {
   );
 
   return (
-    <AppShell title="Your households" menu actions={<NotificationBell disabled={navigating} onPress={() => push('/notifications')} />}>
+    <AppShell title="Your households" tabs>
       {households === null ? (
         error
           ? <StatusMessage text={error} action="Try again" onAction={refresh} loading={refreshing} />

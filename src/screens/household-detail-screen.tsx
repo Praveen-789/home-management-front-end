@@ -183,6 +183,15 @@ export default function HouseholdDetailScreen() {
                   <Icon source="arrow-right" size={22} color={theme.colors.primary} />
                 </View>
               </Card>
+              <Card mode="contained" style={{ borderRadius: 22, backgroundColor: theme.colors.secondaryContainer }} disabled={navigating}
+                onPress={() => push({ pathname: '/posts', params: { householdId } })} accessibilityLabel="Open household posts">
+                <View style={[styles.featureContent, { flexDirection: 'row', alignItems: 'center', gap: 16 }]}>
+                  <Icon source="newspaper-variant-outline" size={30} color={theme.colors.primary} />
+                  <View style={{ flex: 1, gap: 4 }}><Text variant="titleMedium" style={styles.heading}>Posts</Text>
+                    <Text variant="bodyMedium">Share moments with everyone at home.</Text></View>
+                  <Icon source="arrow-right" size={22} color={theme.colors.primary} />
+                </View>
+              </Card>
               <View style={styles.sectionHeading}>
                 <Text variant="titleLarge" style={styles.heading}>The people at home</Text>
                 <View style={[styles.count, { backgroundColor: theme.colors.surfaceVariant }]}><Text variant="labelLarge">{members.length}</Text></View>

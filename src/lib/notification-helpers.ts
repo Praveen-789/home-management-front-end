@@ -7,6 +7,7 @@ import type { Pagination } from '@/api/tasks';
 export const NOTIFICATION_TYPES = [
   'TASK_ASSIGNED', 'TASK_COMPLETED', 'EXPENSE_ADDED', 'EXPENSE_UPDATED',
   'HOUSEHOLD_INVITATION', 'INVITATION_DECLINED', 'MEMBER_JOINED', 'MEMBER_REMOVED', 'CHAT_MESSAGE',
+  'POST_CREATED', 'POST_COMMENTED',
 ] as const;
 export type NotificationType = typeof NOTIFICATION_TYPES[number];
 
@@ -20,6 +21,8 @@ const ICONS: Record<NotificationType, string> = {
   INVITATION_DECLINED: 'email-remove-outline',
   MEMBER_JOINED: 'account-plus-outline',
   MEMBER_REMOVED: 'account-minus-outline',
+  POST_CREATED: 'newspaper-variant-outline',
+  POST_COMMENTED: 'comment-text-outline',
 };
 
 export function notificationIcon(type: string): string {
@@ -32,6 +35,7 @@ export type NotificationTarget =
   | { kind: 'chat'; householdId: string; conversationId: string }
   | { kind: 'task'; householdId: string; taskId: string }
   | { kind: 'expense'; householdId: string; expenseId: string }
+  | { kind: 'post'; householdId: string; postId: string }
   | { kind: 'household'; householdId: string }
   // The user is not a member yet, so there is no household to open: the inbox asks for an answer.
   | { kind: 'invitation'; householdId: string; invitationId: string };
@@ -42,6 +46,7 @@ export function notificationTarget(notification: { type: string; householdId: st
   if (type === 'CHAT_MESSAGE') return entityId ? { kind: 'chat', householdId, conversationId: entityId } : null;
   if (type.startsWith('TASK_')) return entityId ? { kind: 'task', householdId, taskId: entityId } : null;
   if (type.startsWith('EXPENSE_')) return entityId ? { kind: 'expense', householdId, expenseId: entityId } : null;
+  if (type.startsWith('POST_')) return entityId ? { kind: 'post', householdId, postId: entityId } : null;
   if (type === 'HOUSEHOLD_INVITATION') return entityId ? { kind: 'invitation', householdId, invitationId: entityId } : null;
   if (type === 'MEMBER_JOINED' || type === 'INVITATION_DECLINED') return { kind: 'household', householdId };
   return null;

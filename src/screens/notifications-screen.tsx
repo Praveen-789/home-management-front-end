@@ -111,6 +111,7 @@ export default function NotificationsScreen() {
     if (target.kind === 'chat') push({ pathname: '/chats/[conversationId]', params: { conversationId: target.conversationId } });
     else if (target.kind === 'task') push({ pathname: '/households/[householdId]/tasks/[taskId]', params: { householdId: target.householdId, taskId: target.taskId } });
     else if (target.kind === 'expense') push({ pathname: '/households/[householdId]/expenses/[expenseId]', params: { householdId: target.householdId, expenseId: target.expenseId } });
+    else if (target.kind === 'post') push({ pathname: '/households/[householdId]/posts/[postId]', params: { householdId: target.householdId, postId: target.postId } });
     else push({ pathname: '/households/[householdId]', params: { householdId: target.householdId } });
   }
 
@@ -142,7 +143,7 @@ export default function NotificationsScreen() {
   return (
     <AppShell
       title="Notifications"
-      back
+      tabs
       actions={<HeaderAction icon="check-all" accessibilityLabel="Mark all as read" disabled={unreadCount === 0 || markingAll} onPress={markAllRead} />}>
       <View style={styles.filters}>
         {FILTERS.map((option) => (
