@@ -20,7 +20,10 @@
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "output": "static",
@@ -66,6 +69,9 @@
       "eas": {
         "projectId": "0f23eae9-283c-41ee-9d76-6e1d4ac95ead"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0f23eae9-283c-41ee-9d76-6e1d4ac95ead"
     }
   }
 }
