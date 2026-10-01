@@ -13,7 +13,9 @@ import { useHouseholdStore } from '@/stores/household-store';
 import { useChatStore } from '@/stores/chat-store';
 import { usePushState } from '@/lib/push-state';
 import { registerPush } from '@/lib/push-registration';
-import { conversationName, messageSummary } from '@/lib/chat-helpers';
+import { conversationName, messageSummary, typingLabel } from '@/lib/chat-helpers';
+import { presenceLabel, usePresence } from '@/lib/chat-presence';
+import { useTyping } from '@/lib/chat-typing';
 import { formatWhen, unreadLabel } from '@/lib/notification-helpers';
 import { errorMessage } from '@/lib/errors';
 import type { Conversation } from '@/api/chat';
@@ -28,6 +30,9 @@ export default function ChatsScreen() {
   const household = households?.find(h => h.id === householdId);
   const ids = useChatStore(s => s.lists[householdId]);
   const conversations = useChatStore(s => s.conversations);
+  const typing = useTyping(s => s.typing);
+  const presenceUsers = usePresence(s => s.users);
+  const connected = useChatStore(s => s.connected);
   const members = useHouseholdStore(s => s.membersByHousehold[householdId]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -89,7 +94,7 @@ export default function ChatsScreen() {
       !households.length ? <StatusMessage text="Join or create a household to start chatting." action="Go to households" onAction={() => router.replace('/')} /> :
       !household ? <StatusMessage text="This household is no longer available." action="Show my chats" onAction={() => setSelection(households[0].id)} /> :
       !ids ? error ? <StatusMessage text={error} action="Try again" onAction={() => void refresh()} /> : <ActivityIndicator style={styles.center} accessibilityLabel="Loading chats" /> :
-      <FlatList data={rows} keyExtractor={c => c.id} contentContainerStyle={styles.list}
+      <FlatList data={rows} extraData={{ typing, presenceUsers, connected }} keyExtractor={c => c.id} contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}
         ListHeaderComponent={<View style={styles.heading}><Text variant="headlineSmall" style={styles.bold}>A little closer to home</Text>
           <Text style={{ color: colors.onSurfaceVariant }}>Talk to everyone, or catch up one to one.</Text>
@@ -104,14 +109,17 @@ export default function ChatsScreen() {
             ? (item.latestMessage.senderId === user?.id ? 'You: ' : group ? item.latestMessage.sender.name + ': ' : '') +
               messageSummary(item.latestMessage)
             : group ? 'A shared space for everyone at home.' : 'Say hello to start the conversation.';
+          // Someone typing takes the preview's place until their message arrives.
+          const onlineStatus = presenceLabel(item, user?.id ?? '', presenceUsers, connected);
+          const typingNow = typingLabel(Object.values(typing[item.id] ?? {}), item.type);
           return <TouchableRipple borderless style={[styles.row, { backgroundColor: colors.surface, borderColor: group ? colors.primary : colors.outlineVariant }]}
             accessibilityLabel={name + (item.unreadCount ? ', ' + item.unreadCount + ' unread messages' : '')}
             onPress={() => router.push({ pathname: '/chats/[conversationId]', params: { conversationId: item.id } })}>
             <View style={styles.rowContent}>
               {group ? <HouseholdAvatar url={household?.pictureUrl} size={50} preview name={household?.name} /> : <UserAvatar name={name} url={item.participants.find(p => p.id !== user?.id)?.avatarUrl} size={50} preview />}
               <View style={styles.preview}><View style={styles.nameRow}><Text variant="titleMedium" style={styles.name} numberOfLines={1}>{name}</Text>{item.muted && <Icon source="bell-off-outline" size={16} color={colors.onSurfaceVariant} />}</View>
-                <Text numberOfLines={2} variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>{preview}</Text>
-                <Text variant="labelSmall" style={{ color: colors.primary, marginTop: 5 }}>{group ? 'EVERYONE AT HOME' : 'PRIVATE CHAT'}</Text></View>
+                <Text numberOfLines={2} variant="bodyMedium" style={{ color: typingNow ? colors.primary : colors.onSurfaceVariant }}>{typingNow ?? preview}</Text>
+                <Text variant="labelSmall" style={{ color: colors.primary, marginTop: 5 }}>{onlineStatus ?? (group ? 'EVERYONE AT HOME' : 'PRIVATE CHAT')}</Text></View>
               <View style={styles.meta}>{item.latestMessage && <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>{formatWhen(item.latestMessage.createdAt)}</Text>}
                 {item.unreadCount > 0 && <Badge>{unreadLabel(item.unreadCount)}</Badge>}</View>
             </View>

@@ -14,7 +14,9 @@ import StatusMessage from '@/components/status-message';
 import UserAvatar from '@/components/user-avatar';
 import { fonts } from '@/constants/fonts';
 import { isApiError } from '@/api/client';
-import { conversationName, deleteForEveryoneUntil, editableUntil, isEdited, MAX_SELECTION, messageDay, messagePhoto, messageSpokenText, messageStatus, messageSummary, messageTime, startsSenderRun, toggleSelection, type MessageStatus } from '@/lib/chat-helpers';
+import { conversationName, deleteForEveryoneUntil, editableUntil, isEdited, MAX_SELECTION, messageDay, messagePhoto, messageSpokenText, messageStatus, messageSummary, messageTime, startsSenderRun, toggleSelection, typingLabel, type MessageStatus } from '@/lib/chat-helpers';
+import { presenceLabel, usePresence } from '@/lib/chat-presence';
+import { reportTyping, useTyping } from '@/lib/chat-typing';
 import { errorMessage } from '@/lib/errors';
 import { chatPhotoUrl } from '@/lib/images';
 import { pickImage, type ImageSource } from '@/lib/pick-image';
@@ -57,6 +59,10 @@ export default function ChatScreen() {
   const draft = useChatStore(s => s.drafts[conversationId] ?? '');
   const draftPhoto = useChatStore(s => s.draftPhotos[conversationId]);
   const connected = useChatStore(s => s.connected);
+  const presenceUsers = usePresence(s => s.users);
+  const onlineStatus = conversation ? presenceLabel(conversation, userId, presenceUsers, connected) : null;
+  const typists = useTyping(s => s.typing[conversationId]);
+  const typing = conversation ? typingLabel(Object.values(typists ?? {}), conversation.type) : null;
   const household = useHouseholdStore(s => s.households?.find(h => h.id === conversation?.householdId));
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [muting, setMuting] = useState(false);
@@ -249,9 +255,11 @@ export default function ChatScreen() {
       <KeyboardAvoidingBody>
         <View style={[styles.context, { borderColor: colors.outlineVariant }]}>
           <Icon source={conversation.type === 'HOUSEHOLD' ? 'account-group-outline' : 'lock-outline'} size={17} color={colors.primary} />
-          <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
-            {household?.name ? household.name + ' · ' : ''}{conversation.type === 'HOUSEHOLD' ? 'Everyone at home' : 'One-to-one chat'}{conversation.muted ? ' · Muted' : ''}
-          </Text>
+          {/* While someone types, this line says so instead of naming the household. */}
+          {typing ? <Text variant="labelMedium" numberOfLines={1} style={{ color: colors.primary, flex: 1 }}>{typing}</Text> :
+          <Text variant="labelMedium" numberOfLines={1} style={{ color: onlineStatus === 'Online' ? colors.primary : colors.onSurfaceVariant, flex: 1 }}>
+            {onlineStatus ?? ((household?.name ? household.name + ' · ' : '') + (conversation.type === 'HOUSEHOLD' ? 'Everyone at home' : 'One-to-one chat'))}{conversation.muted ? ' · Muted' : ''}
+          </Text>}
           {!connected && <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>Reconnecting…</Text>}
         </View>
         {!!error && <View style={styles.error}><HelperText type="error" style={styles.flex}>{error}</HelperText><Button compact onPress={() => void useChatStore.getState().sync(conversationId).catch(() => {})}>Retry</Button></View>}
@@ -360,7 +368,12 @@ export default function ChatScreen() {
               <Menu.Item leadingIcon="image-multiple-outline" title="Choose from library" onPress={() => void attach('library')} />
             </Menu>}
             <TextInput ref={input} value={editing ? editText : draft} multiline maxLength={4000}
-              onChangeText={text => editing ? setEditText(text) : useChatStore.getState().draft(conversationId, text)}
+              onChangeText={text => {
+                if (editing) { setEditText(text); return; }
+                useChatStore.getState().draft(conversationId, text);
+                // Fixing an old message, or emptying the box, is not typing a new one.
+                if (text.trim()) reportTyping(conversationId);
+              }}
               placeholder={editing ? messagePhoto(editing) ? 'Add a caption…' : 'Edit your message…' : draftPhoto ? 'Add a caption…' : 'Write a message…'}
               accessibilityLabel={editing ? 'Edited message' : draftPhoto ? 'Photo caption' : 'Message'} placeholderTextColor={colors.onSurfaceVariant}
               style={[styles.input, { color: colors.onSurface, backgroundColor: colors.surfaceVariant }]} />

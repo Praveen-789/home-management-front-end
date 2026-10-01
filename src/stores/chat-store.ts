@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { presenceBoundary, receivePresenceSnapshot, resetPresence } from '@/lib/chat-presence';
 import * as api from '@/api/chat';
 import { isApiError } from '@/api/client';
 import type { ImageFile, ImageInput } from '@/api/images';
@@ -213,8 +214,10 @@ export const useChatStore = create<State>((set, get) => {
       const running = listing.get(key); if (running) return running;
       const job = (async () => {
         const versions = new Map(preferenceVersion);
+        const presenceStart = presenceBoundary();
         const conversations = await api.listConversations(t, householdId);
         if (!current(t)) return;
+        receivePresenceSnapshot(conversations.flatMap(c => c.participants), presenceStart);
         set(state => ({ conversations: { ...state.conversations, ...Object.fromEntries(conversations.map(c => {
           const previous = state.conversations[c.id];
           const next = reconcile(previous, c);
@@ -243,8 +246,10 @@ export const useChatStore = create<State>((set, get) => {
       const job = (async () => {
         try {
           const version = preferenceVersion.get(id);
+          const presenceStart = presenceBoundary();
           const conversation = await api.getConversation(t, id);
           if (!current(t)) return;
+          receivePresenceSnapshot(conversation.participants, presenceStart);
           const previous = get().threads[id];
           if (previous?.messages.length) {
             for (let index = 0; index < previous.messages.length && current(t); index += 100) {
@@ -365,13 +370,15 @@ export const useChatStore = create<State>((set, get) => {
       if (current(t)) set(state => { const c = state.conversations[id]; return c ? { conversations: { ...state.conversations, [id]: { ...c, muted } } } : state; });
     },
     direct: async (householdId, recipientId) => {
-      const t = token(), c = await api.startDirect(t, householdId, recipientId);
+      const t = token(), presenceStart = presenceBoundary();
+      const c = await api.startDirect(t, householdId, recipientId);
       if (!current(t)) throw new Error('Your session changed. Please try again.');
+      receivePresenceSnapshot(c.participants, presenceStart);
       set(state => ({ conversations: { ...state.conversations, [c.id]: c } }));
       return c.id;
     },
   };
 });
 useAuthStore.subscribe((state, previous) => {
-  if (state.session?.token !== previous.session?.token) { preferenceVersion.clear(); reported.clear(); useChatStore.setState(data()); }
+  if (state.session?.token !== previous.session?.token) { preferenceVersion.clear(); reported.clear(); resetPresence(); useChatStore.setState(data()); }
 });

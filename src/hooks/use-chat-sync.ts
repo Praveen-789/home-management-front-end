@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isPresenceEvent, receivePresence, resetPresence } from '@/lib/chat-presence';
 import { AppState } from 'react-native';
 import { io } from 'socket.io-client';
 import { API_URL } from '@/api/client';
@@ -7,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useChatStore } from '@/stores/chat-store';
 import { useNotificationStore } from '@/stores/notification-store';
 import { dismissChatAlert, resetChatAlerts, showChatAlert } from '@/lib/chat-alerts';
+import { receiveTyping, resetTyping, setTypingReporter, stopTyping } from '@/lib/chat-typing';
 
 // Temporary learning logs: set to false when finished debugging.
 const DEBUG_SOCKET = __DEV__;
@@ -35,8 +37,8 @@ export default function useChatSync() {
       if (state.activeId) void state.sync(state.activeId).catch(() => {});
       for (const householdId of Object.keys(state.lists)) void state.loadList(householdId).catch(() => {});
     };
-    socket.on('connect', () => { if (valid()) { useChatStore.setState({ connected: true }); refresh(); } });
-    socket.on('disconnect', () => { if (valid()) useChatStore.setState({ connected: false }); });
+    socket.on('connect', () => { if (valid()) { socket.emit('chat:activity', { active: AppState.currentState === 'active' }); useChatStore.setState({ connected: true }); refresh(); } });
+    socket.on('disconnect', () => { if (valid()) { useChatStore.setState({ connected: false }); resetPresence(); } });
     socket.on('connect_error', () => { if (valid()) useChatStore.setState({ connected: false }); });
     socket.on('chat:message', (payload: unknown) => {
       if (!valid() || !isRecord(payload) || !isMessage(payload.message)) return;
@@ -48,6 +50,7 @@ export default function useChatSync() {
         lastReadSequence: payload.lastReadSequence as number,
         muted: payload.muted as boolean,
       } : undefined);
+      stopTyping(payload.message.conversationId, payload.message.senderId);
       void useNotificationStore.getState().refreshUnreadCount().catch(() => {});
       if (payload.alert === true && payload.muted !== true && payload.message.senderId !== useAuthStore.getState().session?.user.id &&
         AppState.currentState === 'active' && state.activeId !== payload.message.conversationId) {
@@ -80,27 +83,39 @@ export default function useChatSync() {
     socket.on('chat:receipt', (payload: unknown) => {
       if (valid() && isReceiptEvent(payload)) useChatStore.getState().receiveReceipt(payload);
     });
+    socket.on('chat:presence', (payload: unknown) => {
+      if (valid() && isPresenceEvent(payload)) receivePresence(payload);
+    });
     socket.on('chat:preferences', (payload: unknown) => {
       if (!valid() || !isRecord(payload) || typeof payload.conversationId !== 'string' || typeof payload.muted !== 'boolean') return;
       useChatStore.getState().receivePreferences(payload.conversationId, payload.muted);
     });
+    // Someone else is typing. The mark fades by itself, so no "stopped typing" event is needed.
+    socket.on('chat:typing', (payload: unknown) => {
+      if (!valid() || !isRecord(payload) || typeof payload.conversationId !== 'string' ||
+        typeof payload.userId !== 'string' || typeof payload.name !== 'string') return;
+      receiveTyping(payload.conversationId, payload.userId, payload.name);
+    });
+    // A report made while offline is stale by the time it could go, so volatile drops it instead
+    // of queueing it for the reconnect.
+    setTypingReporter(conversationId => { socket.volatile.emit('chat:typing', { conversationId }); });
     // Connecting (initially or after a disconnect) is the recovery boundary. The REST calls fill
     // any sequence gap that occurred while live events were unavailable.
     const resume = () => {
       if (!valid()) return;
-      if (socket.connected) refresh();
+      if (socket.connected) { socket.emit('chat:activity', { active: true }); refresh(); }
       else socket.connect();
     };
     if (AppState.currentState === 'active') resume();
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') resume();
-      else socket.disconnect();
+      else { if (socket.connected) socket.emit('chat:activity', { active: false }); socket.disconnect(); }
     });
     return () => {
       if (DEBUG_SOCKET) console.log('[socket] cleanup');
       socket.offAny();
       alive = false; subscription.remove(); socket.removeAllListeners(); socket.disconnect();
-      useChatStore.setState({ connected: false }); resetChatAlerts();
+      useChatStore.setState({ connected: false }); resetChatAlerts(); resetTyping(); resetPresence();
     };
   }, [token]);
 }

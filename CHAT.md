@@ -52,6 +52,15 @@ Long-press one of your own messages. While it is under 15 minutes old, the heade
 - A later copy always wins: `newerMessage` in [chat-helpers.ts](src/lib/chat-helpers.ts) keeps the most recently edited copy, and a deletion over both. A page fetched before an edit cannot put the old text back when it arrives late.
 - A push alert already shown keeps the old text; one not yet sent carries the new text.
 
+## Typing
+
+While you type a new message, the others in the chat see it: in the household chat the line under the header reads **Ravi is typing…** (or **Ravi and Asha are typing…**, or **Several people are typing…**), and in a private chat **typing…**. The chat list shows the same line in place of the last message preview.
+
+- The phone tells the backend at most once every 3 seconds per chat (`reportTyping` in [chat-typing.ts](src/lib/chat-typing.ts)), over the chat socket. A report made while offline is dropped, not sent late.
+- Editing a message, or emptying the box, does not count as typing.
+- The mark fades 5 seconds after the last report, and goes at once when that person's message arrives. There is no "stopped typing" event, so a phone that loses its connection mid-sentence cannot leave a mark stuck on screen.
+- Nothing is stored. Signing out clears every mark.
+
 ## Photos
 
 The picture button left of the message box offers **Take photo** or **Choose from library**. The photo waits above the box with a remove button, and the box becomes **Add a caption…**. Send works with a caption or without one. Picking again replaces the waiting photo, because a message carries one. The waiting photo is kept per chat, like the text draft, while you look at other screens.
@@ -119,7 +128,7 @@ The notification action tests cover both payload shapes (parsed for a running ap
 
 The receipt tests cover the tick rules for private and household chats, late joiners, forward-only progress, stale summaries, honest time labels, payload validation, and when the store does and does not report delivery. The delivery tests cover the report from the background task.
 
-The chat tests exercise missing/out-of-order events, paged recovery, retries, stale responses after logout, access removal, batch deletion, the selection limit, the Delete for everyone rules, Clear chat, message editing (the request, live and late edits, edits outside the loaded history, and reconcile), and photo sending: upload once, retry without re-uploading, retry after a failed upload, captionless photos, the message guard, and the waiting photo leaving with lost access. `tests/images.test.mjs` covers the bubble size and the sized Cloudinary URL. Native registration tests cover permission timing, Expo project/token use, and registration/sign-out races.
+The chat tests exercise missing/out-of-order events, paged recovery, retries, stale responses after logout, access removal, batch deletion, the selection limit, the Delete for everyone rules, Clear chat, message editing (the request, live and late edits, edits outside the loaded history, and reconcile), and photo sending: upload once, retry without re-uploading, retry after a failed upload, captionless photos, the message guard, and the waiting photo leaving with lost access. `tests/images.test.mjs` covers the bubble size and the sized Cloudinary URL. `tests/chat-typing.test.mjs` covers the typing line's wording, marks renewing, fading and ending with the message, and the once-every-3-seconds report. Native registration tests cover permission timing, Expo project/token use, and registration/sign-out races.
 
 Phone checks:
 1. Sign in as two different household members on separate devices.
@@ -132,6 +141,7 @@ Phone checks:
 7a. Receipts, with two phones. Send a message with the other phone's app closed: one tick, then two when the push arrives there, without opening the app. Open the chat there: the ticks turn coloured on the first phone within a second. Turn on aeroplane mode on the second phone and send again: it stays on one tick until the phone is back online.
 7b. Long-press one of your own messages and tap the info button: the other person shows "Read" with a time. In the household chat, check that someone who has not opened the chat shows "Delivered" or "Not delivered yet", and that the bubble stays on two grey ticks until everyone has read it. Select someone else's message, or two messages: the info button is not offered.
 7b2. Editing. Send a message, long-press it and tap the pencil. Change the text and save: both phones show the new text with **Edited**, and the chat list too if it is the latest message. Start editing, then cancel with ✕ and with Android back: the draft you were typing comes back. Edit a photo's caption down to nothing: the photo stays. Wait 15 minutes: the pencil is no longer offered. Edit a message while the other phone is in aeroplane mode, then reconnect it: it shows the new text.
+7b3. Typing. With both phones in the private chat, type on one: the other shows **typing…** under the header within a second, and it stays while you keep typing. Stop typing: it goes after about 5 seconds. Type and send: it goes when the message appears. Go back to the chat list on the second phone and type again on the first: the preview line reads **typing…**. In the household chat, type on two phones at once and check the third shows both names. Edit a message: nothing is shown.
 7c. Photos. Send a photo without a caption and one with a caption, from the camera and from the library. Both phones show it in the bubble, the chat list shows `📷 Photo` or `📷 Leak under the sink`, and the push alert says the same. Tap the photo to open it full screen. Try a wide panorama and a tall screenshot: both fit the bubble and open uncropped in the viewer. Turn on aeroplane mode, send a photo, see it fail, turn it off and press Retry message: it arrives once. Delete a photo for everyone within 15 minutes: it is gone on both phones.
 8. Sign out and verify that this installation no longer receives that user's chat notifications.
 9. Reply from a notification three ways: with the app open (pull the shade down), in the background, and swiped away from recents. The message must arrive exactly once each time, the alert must disappear, and the chat must show as read. Test the closed case in a release build (`npx expo run:android --variant release`), because a development build needs Metro running to start its JavaScript.
@@ -139,3 +149,14 @@ Phone checks:
 11. Turn on aeroplane mode, reply, and confirm the **Reply not sent** notice appears and opens the chat.
 
 Automated browser control was unavailable during implementation. Native notification delivery and keyboard/layout behaviour still need the physical-device checks above.
+
+
+## Online and last seen
+
+Direct chats display Online or Last seen with the device's local date/time. Household chats show how many other members are online. The chat list displays the same status below its preview; typing continues to take priority in the open chat. Unknown timestamps produce no last-seen label.
+
+`use-chat-sync.ts` validates `chat:presence` events and updates `chat-presence.ts`. Conversation list/detail responses seed and refresh the presence store. Request boundaries prevent an older REST response from overwriting a newer live event; older live events are ignored. Disconnect/sign-out clears presence, and reconnect refreshes it.
+
+The socket disconnects when the app backgrounds and reconnects when active. It also sends `chat:activity` to report activity explicitly. The server waits five seconds after the final active device leaves before announcing offline. Presence does not imply a message was read.
+
+Deploy the backend presence migration before using this feature. Frontend changes require a new app build or an EAS update on the appropriate channel; pushing the backend does not publish the mobile UI.

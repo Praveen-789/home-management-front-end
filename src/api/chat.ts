@@ -12,7 +12,7 @@ export type Message = {
 // A photo sent in a chat. The sender uploaded it, so unlike a task photo it names no uploader.
 export type ChatPhoto = { id: string; url: string; thumbnailUrl: string; width: number; height: number; bytes: number; format: string; createdAt: string };
 // Chat shows people without their email address.
-export type ChatPerson = { id: string; name: string; avatarUrl?: string | null };
+export type ChatPerson = { id: string; name: string; avatarUrl?: string | null; isOnline?: boolean; lastSeenAt?: string | null };
 export type Conversation = {
   id: string; householdId: string; type: 'HOUSEHOLD' | 'DIRECT';
   createdAt: string; updatedAt: string; participants: ChatPerson[];

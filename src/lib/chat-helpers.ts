@@ -41,6 +41,15 @@ export function isEdited(message: Pick<Message, 'editedAt' | 'deletedAt'>): bool
 export function conversationName(conversation: Conversation, userId: string): string {
   return conversation.type === 'HOUSEHOLD' ? 'Household chat' : conversation.participants.find(p => p.id !== userId)?.name ?? 'Private chat';
 }
+// What a chat shows while others type, or null when nobody is. A private chat has only one other
+// person, whose name is already its title.
+export function typingLabel(names: string[], type: Conversation['type']): string | null {
+  if (!names.length) return null;
+  if (type === 'DIRECT') return 'typing…';
+  if (names.length === 1) return `${names[0]} is typing…`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
+  return 'Several people are typing…';
+}
 function chatTarget(data: unknown, type: string): string | null {
   if (!data || typeof data !== 'object') return null;
   const value = data as Record<string, unknown>;
